@@ -226,7 +226,13 @@ export function commencerTravail(partie, joueur, carteId, maintenant) {
   }
   joueur.carteActive = carteId;
   carte.travailDebut = maintenant;
-  return { ok: true, duree: dureeTravail(carte.type, carte.colonne, carte.expedite) };
+  return {
+    ok: true,
+    duree: dureeTravail(carte.type, carte.colonne, carte.expedite),
+    // Le contrôle qualité a besoin de savoir si l'assiette est défectueuse :
+    // on le transmet dans la réponse (l'état diffusé peut arriver après)
+    defaut: carte.colonne === 'qualite' ? carte.defaut : undefined,
+  };
 }
 
 /**

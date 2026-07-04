@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sushi Kanban Game 🍣</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍣</text></svg>">
+</head>
+<body>
+
+  <!-- ══════════ ÉCRAN ACCUEIL ══════════ -->
+  <section id="ecran-accueil" class="ecran">
+    <div class="lanterne lanterne-g">提灯</div>
+    <div class="lanterne lanterne-d">寿司</div>
+    <div class="accueil-boite">
+      <h1 class="titre-jeu"><span class="titre-icone">🍣</span> Sushi Kanban <span class="titre-sous">le jeu du flux</span></h1>
+      <p class="accueil-pitch">3 manches, 5 minutes chacune, pour vivre le Kanban dans un restaurant de sushis débordé. Sans inscription.</p>
+
+      <div class="accueil-identite">
+        <input id="champ-pseudo" type="text" maxlength="20" placeholder="Votre pseudo" autocomplete="off">
+        <div id="choix-avatars" class="choix-avatars"></div>
+      </div>
+
+      <div class="accueil-actions">
+        <button id="btn-creer" class="btn btn-principal">Créer une salle<small>vous serez facilitateur·rice</small></button>
+        <div class="accueil-rejoindre">
+          <input id="champ-code" type="text" maxlength="4" placeholder="CODE" autocomplete="off">
+          <button id="btn-rejoindre" class="btn">Rejoindre</button>
+        </div>
+      </div>
+      <p id="accueil-erreur" class="message-erreur" hidden></p>
+    </div>
+  </section>
+
+  <!-- ══════════ ÉCRAN LOBBY ══════════ -->
+  <section id="ecran-lobby" class="ecran" hidden>
+    <div class="lobby-boite">
+      <h2>Salle <span id="lobby-code" class="code-salle"></span></h2>
+      <button id="btn-copier-lien" class="btn btn-discret">📋 Copier le lien d’invitation</button>
+      <div id="lobby-joueurs" class="lobby-joueurs"></div>
+      <div class="lobby-postes">
+        <h3>Choisissez votre poste <small>(vous pourrez en changer à tout moment)</small></h3>
+        <div id="lobby-choix-postes" class="barre-postes"></div>
+      </div>
+      <div id="lobby-facilitateur" class="panneau-lancement" hidden>
+        <button id="btn-lancer-m1" class="btn btn-principal">Lancer la manche 1 — Le chaos</button>
+        <p class="lobby-aide">Minimum 2 joueurs. Consultez <code>FACILITATION.md</code> pour le déroulé d’animation.</p>
+      </div>
+      <p id="lobby-attente" class="lobby-aide">En attente du lancement par le facilitateur…</p>
+    </div>
+  </section>
+
+  <!-- ══════════ ÉCRAN JEU ══════════ -->
+  <section id="ecran-jeu" class="ecran" hidden>
+    <header class="jeu-entete">
+      <div class="entete-manche">
+        <span id="jeu-manche" class="badge-manche"></span>
+        <span id="jeu-chrono" class="chrono">5:00</span>
+      </div>
+      <div class="entete-stats">
+        <span title="Sushis livrés">✅ <b id="stat-livres">0</b></span>
+        <span title="Gâchis (périmés + ratés)">🗑️ <b id="stat-gachis">0</b></span>
+        <span title="Débit (sushis / minute)">📈 <b id="stat-throughput">0.0</b>/min</span>
+      </div>
+      <div class="entete-boutons">
+        <button id="btn-sons" class="btn btn-icone" title="Activer / couper les sons">🔊</button>
+        <button id="btn-cfd" class="btn btn-icone" title="Afficher / masquer le CFD">📊</button>
+        <button id="btn-facil" class="btn btn-icone" title="Panneau facilitateur" hidden>⚙️</button>
+      </div>
+    </header>
+
+    <div id="barre-postes-jeu" class="barre-postes barre-postes-jeu"></div>
+
+    <main id="tableau" class="tableau"></main>
+
+    <!-- CFD en direct, dans un coin -->
+    <div id="coin-cfd" class="coin-cfd">
+      <div class="coin-cfd-titre">Flux cumulé <span class="coin-cfd-aide">l’écart vertical = travail en cours</span></div>
+      <canvas id="canvas-cfd" width="360" height="150"></canvas>
+    </div>
+
+    <!-- Panneau facilitateur (repliable) -->
+    <aside id="panneau-facil" class="panneau-facil" hidden>
+      <h3>⚙️ Facilitateur</h3>
+      <div class="facil-ligne">
+        <button id="facil-arreter" class="btn btn-danger">⏹ Arrêter la manche</button>
+        <button id="facil-expedite" class="btn btn-vip" hidden>🔥 Commande VIP</button>
+      </div>
+      <label class="facil-ligne">Débit des commandes <span id="facil-debit-valeur">×1.0</span>
+        <input id="facil-debit" type="range" min="0.5" max="2" step="0.1" value="1">
+      </label>
+      <div id="facil-wip" class="facil-wip"></div>
+      <p id="facil-goulot" class="facil-goulot" hidden></p>
+    </aside>
+
+    <!-- Mini-jeu en surimpression -->
+    <div id="voile-minijeu" class="voile" hidden>
+      <div id="boite-minijeu" class="boite-minijeu"></div>
+    </div>
+  </section>
+
+  <!-- ══════════ ÉCRAN DÉBRIEF ══════════ -->
+  <section id="ecran-debrief" class="ecran" hidden>
+    <div class="debrief-boite">
+      <h2 id="debrief-titre">Débrief</h2>
+      <div id="debrief-manches" class="debrief-manches"></div>
+      <div id="debrief-questions" class="debrief-questions"></div>
+      <div id="debrief-actions" class="debrief-actions"></div>
+    </div>
+  </section>
+
+  <!-- Notifications éphémères -->
+  <div id="toasts" class="toasts"></div>
+
+  <!-- Client Socket.io auto-servi par le serveur : aucune ressource externe -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,485 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Sushi Kanban Game — thème « izakaya moderne »
+   Fond sombre, bois, lanternes, accents rouge (shu-iro) et blanc cassé.
+   Aucune ressource externe : polices système, dessins CSS/SVG inline.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --nuit:        #17120e;   /* fond principal, bois sombre */
+  --bois:        #2a211a;   /* panneaux */
+  --bois-clair:  #3a2d22;   /* cartes, surfaces */
+  --veinure:     #4d3b2b;   /* bordures boisées */
+  --washi:       #f5efe2;   /* blanc cassé (papier washi) */
+  --washi-doux:  #cfc4b0;   /* texte secondaire */
+  --shu:         #c73e3a;   /* rouge japonais */
+  --shu-vif:     #e05548;
+  --or:          #caa96d;   /* laiton des lanternes */
+  --matcha:      #7aa661;   /* succès */
+  --alerte:      #e0a832;
+  --ombre:       0 6px 24px rgba(0, 0, 0, .45);
+  --rayon:       10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: "Hiragino Sans", "Yu Gothic UI", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(199, 62, 58, .12), transparent),
+    repeating-linear-gradient(90deg, transparent 0 118px, rgba(0, 0, 0, .18) 118px 122px),
+    var(--nuit);
+  color: var(--washi);
+  overflow-x: hidden;
+}
+
+.ecran { min-height: 100vh; padding: 16px; }
+[hidden] { display: none !important; }
+
+h1, h2, h3 { font-weight: 700; letter-spacing: .02em; }
+small { color: var(--washi-doux); font-weight: 400; }
+
+/* ── Boutons ─────────────────────────────────────────────────────── */
+
+.btn {
+  font: inherit;
+  color: var(--washi);
+  background: var(--bois-clair);
+  border: 1px solid var(--veinure);
+  border-radius: var(--rayon);
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: transform .12s, background .15s, box-shadow .15s;
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); background: #46362a; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn-principal {
+  background: linear-gradient(160deg, var(--shu-vif), var(--shu));
+  border-color: #a33330;
+  box-shadow: 0 4px 14px rgba(199, 62, 58, .35);
+  font-weight: 700;
+}
+.btn-principal:hover:not(:disabled) { background: linear-gradient(160deg, #e8604f, var(--shu-vif)); }
+.btn-principal small { display: block; color: rgba(255, 255, 255, .8); font-size: .72em; font-weight: 400; }
+.btn-danger { border-color: var(--shu); color: #f0a49d; }
+.btn-vip { background: linear-gradient(160deg, #e0a832, #b8831f); border-color: #96690f; color: #241a05; font-weight: 700; }
+.btn-discret { background: transparent; border-color: var(--veinure); color: var(--washi-doux); }
+.btn-icone { padding: 8px 12px; font-size: 1.1em; }
+
+input[type="text"], input[type="number"] {
+  font: inherit;
+  color: var(--washi);
+  background: #0f0b08;
+  border: 1px solid var(--veinure);
+  border-radius: var(--rayon);
+  padding: 10px 14px;
+}
+input:focus { outline: 2px solid var(--shu); outline-offset: 1px; }
+
+.message-erreur { color: #f0a49d; margin-top: 12px; }
+
+/* ── Écran d'accueil ─────────────────────────────────────────────── */
+
+#ecran-accueil {
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.lanterne {
+  position: absolute;
+  top: 40px;
+  width: 74px; height: 96px;
+  background: radial-gradient(ellipse at 50% 40%, #e8756a, var(--shu) 70%, #8e2b28);
+  border-radius: 40% / 46%;
+  box-shadow: 0 0 44px rgba(224, 85, 72, .5), inset 0 -8px 14px rgba(0, 0, 0, .3);
+  display: grid; place-items: center;
+  color: rgba(255, 244, 230, .92);
+  font-size: 1.05em;
+  writing-mode: vertical-rl;
+  animation: balancement 5s ease-in-out infinite alternate;
+}
+.lanterne::before, .lanterne::after {
+  content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+  width: 34px; height: 8px; background: #241a10; border-radius: 3px;
+}
+.lanterne::before { top: -8px; }
+.lanterne::after { bottom: -8px; }
+.lanterne-g { left: 8vw; }
+.lanterne-d { right: 8vw; animation-delay: -2.6s; }
+@keyframes balancement { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+
+.accueil-boite {
+  background: var(--bois);
+  border: 1px solid var(--veinure);
+  border-radius: 18px;
+  box-shadow: var(--ombre);
+  padding: 36px;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+}
+.titre-jeu { font-size: 2rem; }
+.titre-icone { filter: drop-shadow(0 0 12px rgba(199, 62, 58, .6)); }
+.titre-sous { display: block; font-size: .5em; color: var(--or); font-weight: 400; letter-spacing: .22em; text-transform: uppercase; margin-top: 4px; }
+.accueil-pitch { color: var(--washi-doux); margin: 16px 0 24px; line-height: 1.5; }
+
+.accueil-identite { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+#champ-pseudo { text-align: center; }
+.choix-avatars { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.avatar-choix {
+  font-size: 1.4em; background: var(--bois-clair); border: 2px solid transparent;
+  border-radius: 50%; width: 46px; height: 46px; cursor: pointer; transition: transform .12s;
+}
+.avatar-choix:hover { transform: scale(1.15); }
+.avatar-choix.choisi { border-color: var(--shu); box-shadow: 0 0 10px rgba(199, 62, 58, .5); }
+
+.accueil-actions { display: flex; flex-direction: column; gap: 14px; }
+.accueil-rejoindre { display: flex; gap: 8px; }
+#champ-code { width: 110px; text-transform: uppercase; text-align: center; letter-spacing: .3em; font-weight: 700; }
+.accueil-rejoindre .btn { flex: 1; }
+
+/* ── Lobby ───────────────────────────────────────────────────────── */
+
+#ecran-lobby { display: grid; place-items: center; }
+.lobby-boite {
+  background: var(--bois); border: 1px solid var(--veinure); border-radius: 18px;
+  box-shadow: var(--ombre); padding: 32px; max-width: 720px; width: 100%;
+  display: flex; flex-direction: column; gap: 18px; text-align: center;
+}
+.code-salle {
+  color: var(--or); letter-spacing: .35em; font-size: 1.3em;
+  background: #0f0b08; padding: 4px 14px; border-radius: 8px; border: 1px dashed var(--veinure);
+}
+.lobby-joueurs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.lobby-joueur {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bois-clair); border-radius: 24px; padding: 6px 14px;
+}
+.lobby-joueur.deconnecte { opacity: .4; }
+.lobby-avatar { font-size: 1.3em; }
+.badge-facil { background: var(--shu); border-radius: 8px; padding: 2px 8px; font-size: .72em; }
+.lobby-aide { color: var(--washi-doux); font-size: .9em; }
+.panneau-lancement { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+/* ── Barre des postes ────────────────────────────────────────────── */
+
+.barre-postes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.poste-chip {
+  font: inherit; font-size: .88em; color: var(--washi);
+  background: var(--bois-clair); border: 1px solid var(--veinure);
+  border-radius: 20px; padding: 6px 14px; cursor: pointer; transition: all .15s;
+}
+.poste-chip:hover { border-color: var(--or); }
+.poste-chip.actif { background: var(--shu); border-color: var(--shu-vif); font-weight: 700; }
+.barre-postes-jeu { margin: 10px 0; }
+
+/* ── Écran de jeu ────────────────────────────────────────────────── */
+
+#ecran-jeu { display: flex; flex-direction: column; padding: 10px 14px; }
+
+.jeu-entete {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: var(--bois); border: 1px solid var(--veinure); border-radius: var(--rayon);
+  padding: 10px 16px;
+}
+.badge-manche { color: var(--or); font-weight: 700; }
+.chrono { font-size: 1.5em; font-weight: 700; font-variant-numeric: tabular-nums; margin-left: 14px; }
+.chrono.urgent { color: var(--shu-vif); animation: pulsation 1s infinite; }
+@keyframes pulsation { 50% { opacity: .5; } }
+.entete-stats { display: flex; gap: 18px; font-size: .95em; color: var(--washi-doux); }
+.entete-stats b { color: var(--washi); }
+.entete-boutons { display: flex; gap: 6px; }
+
+/* ── Tableau Kanban ──────────────────────────────────────────────── */
+
+.tableau {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 10px;
+  flex: 1;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 120px; /* place pour le CFD en coin */
+}
+
+.colonne {
+  background: linear-gradient(180deg, var(--bois), #241c15);
+  border: 1px solid var(--veinure);
+  border-radius: var(--rayon);
+  padding: 8px;
+  min-height: 320px;
+  transition: box-shadow .3s, border-color .3s;
+}
+.colonne-entete { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.colonne-nom { font-size: .82em; font-weight: 700; letter-spacing: .03em; }
+.colonne-wip {
+  font-size: .78em; font-variant-numeric: tabular-nums;
+  background: #0f0b08; border-radius: 10px; padding: 2px 8px; color: var(--washi-doux);
+}
+.wip-pleine { background: var(--shu); color: var(--washi); font-weight: 700; }
+.colonne-joueurs { min-height: 22px; font-size: 1em; padding: 2px 0; }
+.colonne-cartes { display: flex; flex-direction: column; gap: 8px; }
+
+/* Colonne pleine (limite WIP atteinte) : elle rougit et vibre */
+.colonne.pleine {
+  border-color: var(--shu);
+  box-shadow: inset 0 0 24px rgba(199, 62, 58, .18), 0 0 14px rgba(199, 62, 58, .22);
+  animation: vibration .5s ease-in-out;
+}
+@keyframes vibration {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); } 50% { transform: translateX(2px); } 75% { transform: translateX(-1px); }
+}
+
+/* Goulot d'étranglement : surlignage discret, facilitateur uniquement */
+.colonne.goulot { border-color: var(--alerte); box-shadow: inset 0 0 20px rgba(224, 168, 50, .14); }
+.colonne.goulot .colonne-nom::after { content: " 🌊"; }
+
+.pile-livres { text-align: center; color: var(--washi-doux); font-size: 1.1em; padding: 12px 0; }
+
+/* ── Cartes sushi ────────────────────────────────────────────────── */
+
+.carte {
+  position: relative;
+  background: linear-gradient(160deg, var(--bois-clair), #32271d);
+  border: 1px solid var(--veinure);
+  border-radius: 8px;
+  padding: 6px 8px 10px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .35);
+  transition: border-color .15s, transform .15s;
+}
+.carte.cliquable { cursor: pointer; }
+.carte.cliquable:hover { border-color: var(--or); transform: translateY(-2px); }
+.carte.mienne { border-color: var(--shu); box-shadow: 0 0 12px rgba(199, 62, 58, .35); }
+.carte.finie { border-style: dashed; opacity: .92; }
+.carte.expedite { border-color: var(--alerte); background: linear-gradient(160deg, #45351b, #32271d); }
+.carte.perissante { animation: pulsation 1.2s infinite; }
+.carte-arrivee { animation: arrivee .4s ease-out; }
+@keyframes arrivee { from { opacity: 0; transform: translateY(-14px) scale(.9); } }
+
+.carte-vip {
+  position: absolute; top: -8px; right: 6px;
+  background: var(--alerte); color: #241a05; font-size: .68em; font-weight: 700;
+  border-radius: 8px; padding: 1px 7px;
+}
+.carte-visuel { text-align: center; }
+.carte-infos { display: flex; justify-content: space-between; align-items: baseline; }
+.carte-nom { font-size: .8em; font-weight: 700; }
+.carte-age { font-size: .72em; color: var(--washi-doux); font-variant-numeric: tabular-nums; }
+.carte-etat { font-size: .72em; color: var(--or); min-height: 1.1em; }
+.carte-action {
+  display: block; text-align: center; font-size: .76em; color: var(--washi);
+  background: rgba(199, 62, 58, .25); border-radius: 6px; margin-top: 4px; padding: 2px;
+}
+
+/* Jauge de fraîcheur */
+.fraicheur { height: 5px; background: #0f0b08; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.fraicheur-barre { height: 100%; width: 100%; background: var(--matcha); border-radius: 3px; transition: background .4s; }
+.fraicheur-barre.fraicheur-alerte { background: var(--alerte); }
+.fraicheur-barre.fraicheur-critique { background: var(--shu-vif); }
+
+/* ── CFD en coin d'écran ─────────────────────────────────────────── */
+
+.coin-cfd {
+  position: fixed; right: 14px; bottom: 14px; z-index: 30;
+  background: rgba(23, 18, 14, .93);
+  border: 1px solid var(--veinure); border-radius: var(--rayon);
+  padding: 8px 10px; box-shadow: var(--ombre);
+}
+.coin-cfd.replie canvas, .coin-cfd.replie .coin-cfd-aide { display: none; }
+.coin-cfd-titre { font-size: .8em; font-weight: 700; color: var(--or); margin-bottom: 4px; }
+.coin-cfd-aide { font-weight: 400; color: var(--washi-doux); margin-left: 8px; }
+
+.cfd-legende { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 8px; font-size: .78em; color: var(--washi-doux); }
+.cfd-legende-item i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+
+/* ── Panneau facilitateur ────────────────────────────────────────── */
+
+.panneau-facil {
+  position: fixed; left: 14px; bottom: 14px; z-index: 30;
+  background: rgba(23, 18, 14, .96);
+  border: 1px solid var(--or); border-radius: var(--rayon);
+  padding: 14px; width: 280px; box-shadow: var(--ombre);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.panneau-facil h3 { color: var(--or); font-size: 1em; }
+.facil-ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .88em; }
+.facil-ligne input[type="range"] { width: 100%; accent-color: var(--shu); }
+.facil-wip { display: flex; flex-direction: column; gap: 4px; font-size: .85em; }
+.facil-wip-ligne { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.facil-wip-ligne input { width: 64px; padding: 4px 8px; }
+.facil-goulot { color: var(--alerte); font-size: .88em; }
+
+/* ── Mini-jeux ───────────────────────────────────────────────────── */
+
+.voile {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(10, 7, 5, .72); backdrop-filter: blur(3px);
+  display: grid; place-items: center; padding: 16px;
+}
+.boite-minijeu {
+  position: relative;
+  background: var(--bois); border: 1px solid var(--or); border-radius: 16px;
+  box-shadow: var(--ombre); padding: 26px; max-width: 560px; width: 100%;
+  text-align: center; display: flex; flex-direction: column; gap: 14px;
+}
+.boite-minijeu h3 { color: var(--or); }
+.minijeu-consigne { color: var(--washi-doux); font-size: .92em; }
+.minijeu-fermer { position: absolute; top: 10px; right: 10px; padding: 4px 10px; font-size: .8em; z-index: 2; }
+.minijeu-verdict { font-weight: 700; min-height: 1.4em; }
+.minijeu-verdict.bon { color: var(--matcha); }
+.minijeu-verdict.mauvais { color: var(--shu-vif); }
+.secousse { animation: secousse .3s; }
+@keyframes secousse {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); } 75% { transform: translateX(6px); }
+}
+.en-vol { z-index: 60; opacity: .9; }
+
+/* Riz : la jauge de cuisson */
+.jauge-riz {
+  position: relative; height: 30px;
+  background: #0f0b08; border: 1px solid var(--veinure); border-radius: 15px; overflow: hidden;
+}
+.jauge-zone { position: absolute; top: 0; bottom: 0; background: rgba(122, 166, 97, .35); border-inline: 2px solid var(--matcha); }
+.jauge-remplissage {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+  background: linear-gradient(90deg, #f2e8cf, var(--alerte));
+  transition: none;
+}
+.jauge-remplissage.chaud { background: linear-gradient(90deg, var(--alerte), var(--shu-vif)); }
+.jauge-etiquettes { display: flex; justify-content: space-between; font-size: .78em; color: var(--washi-doux); padding: 0 6px; }
+.btn-cuire { align-self: center; font-size: 1.1em; padding: 14px 30px; user-select: none; touch-action: none; }
+
+/* Découpe : la planche et les lignes */
+.planche-decoupe {
+  position: relative;
+  background: linear-gradient(180deg, #6d4f33, #57402a);
+  border-radius: 12px; padding: 12px; border: 1px solid var(--veinure);
+}
+.poisson-svg { width: 100%; height: auto; display: block; }
+.ligne-decoupe {
+  position: absolute; top: 12%; height: 76%; width: 14px;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.ligne-decoupe::before {
+  content: ""; position: absolute; inset: 0 5px;
+  background: repeating-linear-gradient(180deg, var(--washi) 0 8px, transparent 8px 14px);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(245, 239, 226, .9);
+  animation: pulsation .8s infinite;
+}
+.ligne-decoupe.coupee::before { background: var(--shu); box-shadow: none; animation: none; }
+
+/* Assemblage : recette, natte, garde-manger */
+.recette { display: flex; gap: 8px; justify-content: center; list-style: none; counter-reset: etape; flex-wrap: wrap; }
+.recette li {
+  counter-increment: etape; font-size: .82em;
+  background: var(--bois-clair); border: 1px solid var(--veinure); border-radius: 8px; padding: 4px 10px;
+}
+.recette li::before { content: counter(etape) ". "; color: var(--or); font-weight: 700; }
+.recette li.faite { background: rgba(122, 166, 97, .25); border-color: var(--matcha); text-decoration: line-through; }
+.natte {
+  min-height: 84px; display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;
+  background: repeating-linear-gradient(90deg, #8a6642 0 10px, #7a5837 10px 20px);
+  border-radius: 8px; border: 2px dashed rgba(245, 239, 226, .4);
+  color: rgba(245, 239, 226, .75); font-size: .9em; padding: 8px;
+}
+.garde-manger { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ingredient {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--bois-clair); border: 1px solid var(--veinure); border-radius: 10px;
+  padding: 8px 10px; cursor: grab; font-size: .74em; user-select: none;
+}
+.ingredient.pose { border-color: var(--matcha); cursor: default; padding: 4px 6px; }
+.pressage { width: 100%; font-size: .9em; }
+.pressage-barre { height: 8px; width: 0; background: var(--matcha); border-radius: 4px; margin-bottom: 6px; }
+
+/* Contrôle qualité */
+.qc-comparaison { display: flex; gap: 18px; justify-content: center; }
+.qc-comparaison figure {
+  background: #0f0b08; border: 1px solid var(--veinure); border-radius: 12px; padding: 12px 18px;
+}
+.qc-comparaison figcaption { font-size: .8em; color: var(--washi-doux); margin-bottom: 6px; }
+.qc-inspection { position: relative; height: 10px; background: #0f0b08; border-radius: 5px; }
+.qc-barre { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--or); border-radius: 5px; }
+.qc-loupe { position: absolute; top: -22px; left: 0; animation: loupe 1.6s ease-in-out infinite alternate; }
+@keyframes loupe { from { transform: translateX(0); } to { transform: translateX(200px); } }
+.qc-actions { display: flex; gap: 12px; justify-content: center; }
+
+/* Service : la salle et le plateau */
+.salle-clients { display: flex; gap: 14px; justify-content: center; }
+.client {
+  background: var(--bois-clair); border: 1px solid var(--veinure); border-radius: 12px;
+  padding: 10px 14px; transition: transform .2s, border-color .2s;
+}
+.client-visage { font-size: 2em; }
+.client-ticket { font-size: .76em; color: var(--washi-doux); margin-top: 4px; }
+.client.servi { border-color: var(--matcha); transform: scale(1.08); }
+.client.vexe { border-color: var(--shu-vif); animation: secousse .35s; }
+.comptoir { display: flex; justify-content: center; padding-top: 6px; }
+.plateau {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: linear-gradient(180deg, #6d4f33, #57402a);
+  border: 2px solid var(--veinure); border-radius: 12px; padding: 10px 22px;
+  font-size: .78em; color: var(--washi-doux); opacity: .6; user-select: none;
+}
+.plateau.pret { opacity: 1; cursor: grab; border-color: var(--or); box-shadow: 0 0 14px rgba(202, 169, 109, .4); }
+
+/* ── Débrief ─────────────────────────────────────────────────────── */
+
+#ecran-debrief { display: grid; place-items: start center; }
+.debrief-boite {
+  background: var(--bois); border: 1px solid var(--veinure); border-radius: 18px;
+  box-shadow: var(--ombre); padding: 30px; max-width: 1100px; width: 100%;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.debrief-manches { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.debrief-manche { background: #211a13; border: 1px solid var(--veinure); border-radius: 12px; padding: 16px; }
+.debrief-manche h3 { color: var(--or); margin-bottom: 10px; }
+.debrief-manche h4 { font-size: .82em; color: var(--washi-doux); margin: 12px 0 6px; }
+.debrief-metriques { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.metrique {
+  display: flex; justify-content: space-between; gap: 6px; font-size: .82em;
+  background: var(--bois-clair); border-radius: 8px; padding: 6px 10px;
+}
+.metrique.mauvais b { color: var(--shu-vif); }
+.debrief-barre-debit { height: 8px; background: #0f0b08; border-radius: 4px; margin-top: 10px; overflow: hidden; }
+.debrief-barre-debit div { height: 100%; background: linear-gradient(90deg, var(--matcha), #9bc06c); }
+.debrief-cfd { width: 100%; height: auto; }
+.cycle-ligne { display: grid; grid-template-columns: 110px 1fr 70px; gap: 8px; align-items: center; font-size: .78em; margin: 3px 0; }
+.cycle-barre { height: 8px; background: #0f0b08; border-radius: 4px; overflow: hidden; }
+.cycle-barre div { height: 100%; background: var(--or); }
+.cycle-goulot .cycle-barre div { background: var(--shu-vif); }
+.cycle-goulot b { color: var(--shu-vif); }
+.debrief-questions ul { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.debrief-questions li {
+  background: rgba(199, 62, 58, .12); border-left: 3px solid var(--shu);
+  border-radius: 0 8px 8px 0; padding: 10px 14px; line-height: 1.45;
+}
+.debrief-actions { display: flex; justify-content: center; }
+
+/* ── Toasts ──────────────────────────────────────────────────────── */
+
+.toasts { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: rgba(23, 18, 14, .95); border: 1px solid var(--or); border-radius: var(--rayon);
+  padding: 10px 18px; box-shadow: var(--ombre);
+  opacity: 0; transform: translateY(-10px); transition: all .3s;
+}
+.toast.visible { opacity: 1; transform: translateY(0); }
+
+/* ── Responsive (tablette) ───────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .tableau { grid-template-columns: repeat(7, minmax(132px, 1fr)); }
+  .coin-cfd canvas { width: 260px; height: 110px; }
+}
+@media (max-width: 800px) {
+  .lanterne { display: none; }
+  .jeu-entete { font-size: .9em; }
+  .panneau-facil { width: 240px; }
+  .qc-comparaison { flex-direction: column; align-items: center; }
+}
