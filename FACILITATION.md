@@ -1,5 +1,9 @@
 # 🏮 Guide d'animation — Sushi Kanban Game
 
+*Un jeu [Insuffle Académie](https://insuffle-academie.com) — Formation
+Facilitation & Intelligence Collective. En ligne sur
+[kanban.insuffle-academie.com](https://kanban.insuffle-academie.com).*
+
 Ce guide s'adresse au facilitateur ou à la facilitatrice. Il déroule un
 atelier de **20 à 30 minutes de jeu** (45–60 minutes avec les débriefs) pour
 faire vivre les fondamentaux de Kanban : visualisation du flux, limites WIP,
@@ -25,6 +29,28 @@ explications arrivent APRÈS le vécu, jamais avant.
    - 6+ joueurs : un par poste, les restants « volants »
    - Dites simplement : « installez-vous à un poste » — sans préciser qu'on
      peut en changer. La découverte de la mobilité EST un moment pédagogique.
+
+**Outils intégrés à connaître avant de démarrer :**
+- Au lancement de chaque manche, un **brief plein écran** annonce les règles
+  à toute l'équipe (il se referme seul après 9 s) : lisez-le à voix haute,
+  c'est votre consigne — et la première politique explicite de la manche.
+- Le bouton **❓ lexique** donne les 8 définitions clés : renvoyez-y les
+  joueurs qui demandent « c'est quoi le lead time ? » plutôt que d'exposer.
+- Chaque écran de débrief contient un encart **« 💡 Ce qu'il fallait voir »** :
+  gardez-le pour APRÈS la discussion — le vécu d'abord, la théorie ensuite.
+- Le bouton **🖨 Exporter le bilan (PDF)** produit un compte rendu imprimable
+  des manches (métriques, CFD, enseignements) : les participants repartent
+  avec, et il porte vos coordonnées Insuffle Académie.
+- Le bouton **📺 mode projection** agrandit tableau, chrono et CFD : activez-le
+  sur l'écran partagé de la salle (ou dans la visio) — c'est votre « radiateur
+  d'information » commun.
+- Les commandes arrivent par **deux canaux** : la salle 🏮 (numéro de table)
+  et la livraison 🛵 « Yatta Eats », dont la fraîcheur fond 20 % plus vite —
+  deux SLA différents dans le même flux, matière à débrief.
+- **Coopération** : à deux ou plus sur un même poste, le badge 🤝 apparaît et
+  chaque geste y est 25 % plus rapide — aider le goulot paie mécaniquement.
+  Et le bouton **🙋 À l'aide !** fait scintiller le poste débordé sur l'écran
+  de toute l'équipe.
 
 Votre panneau ⚙️ (bouton en haut à droite pendant la manche) permet de :
 lancer/arrêter les manches, régler le débit des commandes, fixer les limites
@@ -75,7 +101,9 @@ première **politique explicite** : notez-la à voix haute.
 - Les colonnes pleines rougissent et vibrent ; l'amont se retrouve bloqué.
 - Des joueurs se retrouvent « sans rien à faire » : le moment clé de la
   partie. S'ils ne bougent pas d'eux-mêmes, glissez : « vous avez le droit
-  de changer de poste… »
+  de changer de poste… » — et faites remarquer le badge 🤝 : à deux sur un
+  poste, chaque geste est 25 % plus rapide. Encouragez aussi le bouton
+  🙋 À l'aide ! : demander de l'aide est une pratique d'équipe, pas un aveu.
 - Le débit MONTE souvent par rapport à la manche 1 alors qu'on travaille
   « moins » : c'est la démonstration centrale.
 

@@ -7,7 +7,7 @@
  */
 
 import { MODES, STATUTS } from '../shared/constants.js';
-import { CONFIG, tirerTypeSushi } from '../shared/game-config.js';
+import { CONFIG, tirerTypeSushi, tirerCanal } from '../shared/game-config.js';
 import {
   creerCarte, perimerCartes, pousserFinies, libererCartesDuJoueur,
 } from './flow.js';
@@ -77,18 +77,21 @@ export function tick(salle, maintenant) {
   const evenements = [];
   if (partie.statut !== STATUTS.MANCHE) return evenements;
 
-  // 1. Arrivée des commandes (le client, lui, n'arrête jamais de commander)
+  // 1. Arrivée des commandes : la salle et les scooters Yatta Eats
   if (maintenant >= salle.prochaineCommande) {
     const type = tirerTypeSushi(partie.aleatoire);
-    creerCarte(partie, type, false, maintenant);
+    const canal = tirerCanal(partie.aleatoire);
+    creerCarte(partie, type, false, maintenant, canal);
     salle.prochaineCommande = maintenant + prochainIntervalle(salle);
-    evenements.push({ type: 'commande' });
+    evenements.push({ type: 'commande', canal });
   }
 
   // 2. Péremption : la fraîcheur matérialise le lead time
   const joueurs = [...salle.joueurs.values()];
   const perimees = perimerCartes(partie, maintenant, joueurs);
-  if (perimees.length > 0) evenements.push({ type: 'perime', nombre: perimees.length });
+  if (perimees.length > 0) {
+    evenements.push({ type: 'perime', nombre: perimees.length, colonnes: perimees.map((c) => c.colonne) });
+  }
 
   // 3. Flux poussé : les cartes finies avancent seules (sauf en mode pull)
   pousserFinies(partie, maintenant);
@@ -153,7 +156,7 @@ export function injecterExpedite(salle, maintenant) {
     return { ok: false, erreur: 'Les commandes VIP ne sont actives qu’en manche 3.' };
   }
   const type = tirerTypeSushi(partie.aleatoire);
-  creerCarte(partie, type, true, maintenant);
+  creerCarte(partie, type, true, maintenant, 'salle'); // le VIP est à table, il regarde
   return { ok: true };
 }
 
@@ -191,6 +194,7 @@ export function serialiserEtat(salle, maintenant = Date.now()) {
     },
     cartes: [...partie.cartes.values()].map((c) => ({
       id: c.id, type: c.type, expedite: c.expedite, creeLe: c.creeLe,
+      canal: c.canal, table: c.table,
       colonne: c.colonne, etat: c.etat, proprietaire: c.proprietaire,
       travailDebut: c.travailDebut, retours: c.retours,
       // Le défaut n'est révélé qu'au moment du contrôle qualité
@@ -200,6 +204,10 @@ export function serialiserEtat(salle, maintenant = Date.now()) {
       livres: partie.stats.livrees.length,
       gachis: partie.stats.gachis.length,
       throughput: throughputParMinute(partie.stats, maintenant),
+      // Lead time moyen en direct : la pression du temps, chiffrée
+      leadTimeMoyen: partie.stats.livrees.length
+        ? partie.stats.livrees.reduce((s, l) => s + l.leadTime, 0) / partie.stats.livrees.length
+        : 0,
       wip: wipParColonne(partie.cartes),
       cfd: partie.stats.cfd,
     },

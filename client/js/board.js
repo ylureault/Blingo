@@ -43,15 +43,19 @@ export function rendreTableau(element, etat, joueurId, surCarte) {
     if (estFacilitateur && etat.goulot === colonne.id) colEl.classList.add('goulot');
 
     // En-tête : nom, compteur WIP, joueurs présents à ce poste
-    const presents = etat.joueurs
-      .filter((j) => j.poste === colonne.id && j.connecte)
+    const occupants = etat.joueurs.filter((j) => j.poste === colonne.id && j.connecte);
+    const presents = occupants
       .map((j) => `<span class="poste-joueur" title="${j.pseudo}">${j.avatar}</span>`).join('');
+    // À deux ou plus au même poste : bonus d'entraide (le geste est plus rapide)
+    const entraide = occupants.length >= 2
+      ? '<span class="badge-entraide" title="Entraide : le travail est 25 % plus rapide à plusieurs">🤝</span>'
+      : '';
     colEl.innerHTML = `
       <header class="colonne-entete">
         <span class="colonne-nom">${colonne.nom}</span>
         <span class="colonne-wip ${pleine ? 'wip-pleine' : ''}">${cartes.length}${limite != null ? `/${limite}` : ''}</span>
       </header>
-      <div class="colonne-joueurs">${presents}</div>
+      <div class="colonne-joueurs">${presents}${entraide}</div>
       <div class="colonne-cartes"></div>`;
 
     const zone = colEl.querySelector('.colonne-cartes');
@@ -90,11 +94,16 @@ function rendreCarte(carte, etat, moi, surCarte) {
   el.className = 'carte';
   el.dataset.id = carte.id;
   el.dataset.creele = carte.creeLe;
-  el.dataset.dureevie = dureeVie(carte.type, carte.expedite);
+  el.dataset.dureevie = dureeVie(carte.type, carte.expedite, carte.canal);
   if (carte.expedite) el.classList.add('expedite');
   if (carte.proprietaire === moi?.id) el.classList.add('mienne');
   if (action) el.classList.add('cliquable');
   if (carte.etat === ETATS_CARTE.FINI && carte.colonne !== 'commandes') el.classList.add('finie');
+
+  // Provenance de la commande : table de la salle ou scooter Yatta Eats
+  const canal = carte.canal === 'livraison'
+    ? `${CONFIG.canaux.livraison.emoji} ${CONFIG.canaux.livraison.label}`
+    : `${CONFIG.canaux.salle.emoji} Table ${carte.table ?? '?'}`;
 
   el.innerHTML = `
     ${carte.expedite ? '<span class="carte-vip">🔥 VIP</span>' : ''}
@@ -103,6 +112,7 @@ function rendreCarte(carte, etat, moi, surCarte) {
       <span class="carte-nom">${type.nom}</span>
       <span class="carte-age" data-role="age"></span>
     </div>
+    <div class="carte-canal ${carte.canal === 'livraison' ? 'canal-livraison' : ''}">${canal}</div>
     <div class="carte-etat">${etiquetteEtat(carte, proprietaire)}</div>
     <div class="fraicheur"><div class="fraicheur-barre" data-role="fraicheur"></div></div>
     ${action ? `<span class="carte-action">${action === 'travailler' ? '🔨 travailler' : (etat.manche?.mode === 'pull' && carte.colonne !== moi?.poste ? '🪝 tirer' : '✋ prendre')}</span>` : ''}

@@ -38,12 +38,16 @@ export function creerPartie(aleatoire = Math.random) {
 }
 
 /** Crée une carte de commande et la place dans la colonne « Commandes ». */
-export function creerCarte(partie, type, expedite, maintenant) {
+export function creerCarte(partie, type, expedite, maintenant, canal = 'salle') {
   partie.compteurCartes += 1;
   const carte = {
     id: `c${partie.compteurCartes}`,
     type,
     expedite,
+    canal,                   // 'salle' (table du resto) ou 'livraison' (Yatta Eats)
+    table: canal === 'salle'
+      ? 1 + Math.floor(partie.aleatoire() * (CONFIG.canaux.salle.nbTables || 12))
+      : null,
     creeLe: maintenant,
     colonne: 'commandes',
     etat: ETATS_CARTE.FINI,  // « finie » dans Commandes = prête à entrer dans le flux
@@ -212,8 +216,10 @@ export function prendreCarte(partie, joueur, carteId, maintenant) {
  * Démarrer la mini-mécanique sur une carte possédée.
  * Changer de carte active abandonne la progression de l'ancienne :
  * c'est le COÛT DU CHANGEMENT DE CONTEXTE, rendu tangible en manche 1.
+ * `entraide` : true si un autre joueur occupe le même poste — le geste est
+ * alors plus rapide (aider le goulot paie, mécaniquement).
  */
-export function commencerTravail(partie, joueur, carteId, maintenant) {
+export function commencerTravail(partie, joueur, carteId, maintenant, entraide = false) {
   if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'La manche n’est pas en cours.' };
   const carte = partie.cartes.get(carteId);
   if (!carte || carte.proprietaire !== joueur.id || carte.etat !== ETATS_CARTE.ENCOURS) {
@@ -226,9 +232,15 @@ export function commencerTravail(partie, joueur, carteId, maintenant) {
   }
   joueur.carteActive = carteId;
   carte.travailDebut = maintenant;
+  const duree = Math.round(
+    dureeTravail(carte.type, carte.colonne, carte.expedite)
+    * (entraide ? CONFIG.entraide.facteur : 1),
+  );
+  carte.dureePrevue = duree; // mémorisée pour la validation anti-triche
   return {
     ok: true,
-    duree: dureeTravail(carte.type, carte.colonne, carte.expedite),
+    duree,
+    entraide,
     // Le contrôle qualité a besoin de savoir si l'assiette est défectueuse :
     // on le transmet dans la réponse (l'état diffusé peut arriver après)
     defaut: carte.colonne === 'qualite' ? carte.defaut : undefined,
@@ -249,7 +261,9 @@ export function terminerTravail(partie, joueur, carteId, resultat, maintenant) {
   if (carte.travailDebut == null) return { ok: false, erreur: 'Le travail n’a pas commencé.' };
 
   // Anti-triche : impossible de finir plus vite que la mécanique ne le permet
-  const dureeMin = dureeTravail(carte.type, carte.colonne, carte.expedite) * CONFIG.antiTriche.ratioDureeMinimale;
+  // (dureePrevue tient compte du bonus d'entraide accordé au démarrage)
+  const dureeMin = (carte.dureePrevue ?? dureeTravail(carte.type, carte.colonne, carte.expedite))
+    * CONFIG.antiTriche.ratioDureeMinimale;
   if (maintenant - carte.travailDebut < dureeMin) {
     return { ok: false, erreur: 'Trop rapide pour être honnête ! Le travail continue.' };
   }
@@ -348,7 +362,7 @@ export function livrer(partie, carte, maintenant) {
   }
 
   partie.stats?.livrees.push({
-    id: carte.id, type: carte.type, expedite: carte.expedite,
+    id: carte.id, type: carte.type, expedite: carte.expedite, canal: carte.canal,
     creeLe: carte.creeLe, livreLe: maintenant,
     leadTime: maintenant - carte.creeLe,
     sejours: carte.sejours, retours: carte.retours,
@@ -373,7 +387,7 @@ export function gaspiller(partie, carte, raison, maintenant, joueurs = []) {
 export function perimerCartes(partie, maintenant, joueurs = []) {
   const perimees = [];
   for (const carte of [...partie.cartes.values()]) {
-    if (maintenant - carte.creeLe >= dureeVie(carte.type, carte.expedite)) {
+    if (maintenant - carte.creeLe >= dureeVie(carte.type, carte.expedite, carte.canal)) {
       gaspiller(partie, carte, RAISONS_GACHIS.PERIME, maintenant, joueurs);
       perimees.push(carte);
     }

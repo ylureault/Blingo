@@ -206,8 +206,12 @@ test('le résumé de manche agrège livraisons, gâchis et lead time', () => {
   stats.livrees.push({ leadTime: 20_000, sejours: { riz: 6000 } });
   stats.gachis.push({ raison: 'perime' });
   stats.gachis.push({ raison: 'rate' });
+  stats.livrees[0].canal = 'salle';
+  stats.livrees[1].canal = 'livraison';
   const r = resumerManche(stats, 300_000);
   assert.equal(r.livres, 2);
+  assert.equal(r.livresSalle, 1);
+  assert.equal(r.livresLivraison, 1);
   assert.equal(r.leadTimeMoyen, 15_000);
   assert.equal(r.gachisPerimes, 1);
   assert.equal(r.gachisRates, 1);

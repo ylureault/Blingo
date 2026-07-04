@@ -10,6 +10,16 @@
  */
 
 export const CONFIG = {
+  // ---------- Marque ----------
+  // Le jeu est édité par Insuffle Académie et hébergé sur son sous-domaine.
+  marque: {
+    nom: 'Insuffle Académie',
+    url: 'https://insuffle-academie.com',
+    urlJeu: 'https://kanban.insuffle-academie.com',
+    tagline: 'On ne vous explique pas la facilitation · on la pratique avec vous',
+    signature: 'Formation Facilitation & Intelligence Collective',
+  },
+
   // ---------- Salle ----------
   salle: {
     maxJoueurs: 8,                 // joueurs maximum par salle (facilitateur inclus)
@@ -63,6 +73,23 @@ export const CONFIG = {
       maxCartesParJoueur: 1,
     },
   ],
+
+  // ---------- Canaux de commande (la vraie vie d'un resto japonais) ----------
+  // Deux sources de demande : la salle (tables du restaurant) et la
+  // plateforme de livraison « Yatta Eats ». Le sushi qui part en scooter
+  // doit être plus frais : son SLA est plus court — une classe de service
+  // de plus à découvrir.
+  canaux: {
+    salle: {
+      label: 'Sur place', emoji: '🏮', poids: 60,
+      facteurFraicheur: 1.0,     // fraîcheur normale : le client est à table
+      nbTables: 12,              // numéro de table affiché sur la carte
+    },
+    livraison: {
+      label: 'Yatta Eats', emoji: '🛵', poids: 40,
+      facteurFraicheur: 0.8,     // le trajet mange 20 % de la fraîcheur
+    },
+  },
 
   // ---------- Arrivée des commandes ----------
   commandes: {
@@ -118,6 +145,14 @@ export const CONFIG = {
     service:    3000,
   },
 
+  // ---------- Coopération entre les postes ----------
+  entraide: {
+    // Quand au moins deux joueurs occupent le même poste, chaque geste y est
+    // plus rapide : l'incitation à aider le goulot est MÉCANIQUE, pas morale.
+    facteur: 0.75,          // 0.75 = travail 25 % plus rapide à plusieurs
+    cooldownAppel: 8000,    // délai minimal entre deux appels à l'aide d'un même joueur
+  },
+
   // ---------- Anti-triche ----------
   antiTriche: {
     // Le serveur refuse un « travail terminé » envoyé avant ce ratio de la durée
@@ -137,6 +172,56 @@ export const CONFIG = {
     dureeVie: 60_000,   // un VIP n'attend pas : péremption accélérée
     facteur: 0.8,       // mais la commande est simple (préparée plus vite)
   },
+
+  // ---------- Briefs de manche ----------
+  // Affichés en plein écran quelques secondes au lancement de chaque manche :
+  // les POLITIQUES EXPLICITES de la manche, annoncées avant de jouer.
+  briefsManche: {
+    1: {
+      accroche: 'Le restaurant ouvre. Livrez un maximum de sushis !',
+      regles: [
+        'Les commandes arrivent en continu et sont poussées vers vos postes',
+        'Empilez autant de cartes que vous voulez… si vous l’osez',
+        'Changer de carte en cours de travail fait tout recommencer',
+      ],
+    },
+    2: {
+      accroche: 'Nouvelles règles d’équipe : les limites WIP.',
+      regles: [
+        'Chaque colonne a une limite : pleine, elle n’accepte plus rien',
+        'Une seule carte à la fois par personne',
+        'Un poste bloqué ? Vous pouvez changer de poste à tout moment…',
+      ],
+    },
+    3: {
+      accroche: 'Plus rien n’avance tout seul : tirez le travail.',
+      regles: [
+        'Une carte finie attend qu’un poste aval la TIRE',
+        'On ne tire que si on a la capacité de traiter',
+        'Les commandes VIP 🔥 passent avant tout — et périment 2× plus vite',
+      ],
+    },
+  },
+
+  // ---------- Enseignements clés affichés au débrief ----------
+  // « Ce qu'il fallait voir » : l'ancrage théorique APRÈS le vécu.
+  enseignements: {
+    1: 'En flux poussé, commencer beaucoup ne fait pas livrer beaucoup : le travail s’accumule, le lead time explose et la fraîcheur (votre client) en paie le prix. Le multitâche a un coût que vous avez senti dans les doigts.',
+    2: 'Limiter le travail en cours ne ralentit pas l’équipe : ça la concentre. Le système se met au rythme de son goulot — et le temps « libre » devient du temps pour l’aider. Stop starting, start finishing.',
+    3: 'Tirer le travail, c’est laisser la capacité réelle décider. Les classes de service (VIP vs standard) sont une politique explicite : l’urgence est gérée par une règle, pas par du stress.',
+  },
+
+  // ---------- Lexique Kanban (bouton ❓ en jeu) ----------
+  lexique: [
+    ['Flux poussé / tiré', 'Poussé : l’amont envoie dès qu’il a fini. Tiré : l’aval prend quand il a de la capacité.'],
+    ['WIP (travail en cours)', 'Tout ce qui est commencé mais pas livré. Le limiter accélère le flux.'],
+    ['Lead time', 'Temps entre la commande et la livraison, vu du client. Ici : la jauge de fraîcheur.'],
+    ['Cycle time', 'Temps passé dans une étape du flux. Sa somme + les attentes = le lead time.'],
+    ['Throughput (débit)', 'Nombre d’éléments livrés par unité de temps. La seule vitesse qui compte.'],
+    ['Goulot d’étranglement', 'L’étape la plus lente : c’est elle qui fixe le débit de tout le système.'],
+    ['CFD', 'Diagramme de flux cumulé : chaque bande = une étape ; une bande qui gonfle = un bouchon.'],
+    ['Classe de service', 'Règle explicite de priorité (ex. VIP) : l’urgence traitée par une politique, pas par la panique.'],
+  ],
 
   // ---------- Questions de débrief affichées entre les manches ----------
   // La pédagogie se joue ICI : le facilitateur s'appuie sur ces questions.
@@ -169,10 +254,27 @@ export function dureeTravail(typeSushi, poste, expedite = false) {
   return Math.round(base * facteur);
 }
 
-/** Renvoie la durée de vie (fraîcheur totale, ms) d'une carte. */
-export function dureeVie(typeSushi, expedite = false) {
+/**
+ * Renvoie la durée de vie (fraîcheur totale, ms) d'une carte.
+ * Les commandes en livraison périment plus vite : le scooter attend.
+ */
+export function dureeVie(typeSushi, expedite = false, canal = 'salle') {
   if (expedite) return CONFIG.expedite.dureeVie;
-  return CONFIG.typesSushi[typeSushi]?.dureeVie ?? 100_000;
+  const base = CONFIG.typesSushi[typeSushi]?.dureeVie ?? 100_000;
+  const facteur = CONFIG.canaux[canal]?.facteurFraicheur ?? 1;
+  return Math.round(base * facteur);
+}
+
+/** Tire un canal de commande (salle / livraison) selon les poids. */
+export function tirerCanal(aleatoire = Math.random) {
+  const entrees = Object.entries(CONFIG.canaux);
+  const total = entrees.reduce((s, [, c]) => s + c.poids, 0);
+  let seuil = aleatoire() * total;
+  for (const [id, c] of entrees) {
+    seuil -= c.poids;
+    if (seuil <= 0) return id;
+  }
+  return 'salle';
 }
 
 /** Tire un type de sushi au hasard selon les poids configurés. */

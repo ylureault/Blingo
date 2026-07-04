@@ -24,12 +24,14 @@ const $ = (id) => document.getElementById(id);
 let avatarChoisi = AVATARS[0];
 let jetonMiniJeu = 0;      // invalide les mini-jeux abandonnés
 let numeroMancheAffiche = 0; // pour ne reconstruire le panneau WIP qu'au changement
+let mancheBriefee = 0;       // dernier brief de manche affiché
 
 function init() {
   net.connecter();
   construireChoixAvatars();
   brancherAccueil();
   brancherJeu();
+  brancherLexique();
   net.onEtat(rendre);
   net.onEvenement(surEvenement);
 
@@ -156,6 +158,14 @@ function brancherJeu() {
     $('btn-sons').textContent = sons.basculer() ? '🔊' : '🔇';
   });
   $('btn-cfd').addEventListener('click', () => $('coin-cfd').classList.toggle('replie'));
+  // Mode projection : pour l'écran partagé (vidéoprojecteur / visio) — tout
+  // en plus grand, sans les affordances de jeu du poste local
+  $('btn-projection').addEventListener('click', () => {
+    document.body.classList.toggle('projection');
+    toast(document.body.classList.contains('projection')
+      ? '📺 Mode projection : idéal sur l’écran partagé de la salle.'
+      : 'Retour au mode joueur.');
+  });
   $('btn-facil').addEventListener('click', () => { $('panneau-facil').hidden = !$('panneau-facil').hidden; });
   $('btn-copier-lien').addEventListener('click', async () => {
     const lien = `${window.location.origin}/${net.etat?.code || ''}`;
@@ -165,6 +175,8 @@ function brancherJeu() {
   $('btn-lancer-m1').addEventListener('click', () => {
     net.action(EVT.FACIL_DEMARRER, { numero: 1 }).then(retourAction);
   });
+  // Appel à l'aide : toute l'équipe voit le poste qui déborde
+  $('btn-aide').addEventListener('click', () => net.action(EVT.APPELER_AIDE).then(retourAction));
   // Panneau facilitateur
   $('facil-arreter').addEventListener('click', () => net.action(EVT.FACIL_ARRETER).then(retourAction));
   $('facil-expedite').addEventListener('click', () => net.action(EVT.FACIL_EXPEDITE).then(retourAction));
@@ -182,10 +194,19 @@ function rendreJeu(etat) {
   $('stat-livres').textContent = etat.statsLive?.livres ?? 0;
   $('stat-gachis').textContent = etat.statsLive?.gachis ?? 0;
   $('stat-throughput').textContent = (etat.statsLive?.throughput ?? 0).toFixed(1);
+  const ltm = etat.statsLive?.leadTimeMoyen ?? 0;
+  $('stat-leadtime').textContent = ltm > 0 ? `${Math.round(ltm / 1000)}s` : '—';
+
+  // Brief de manche : les politiques explicites, annoncées au coup d'envoi
+  if (mancheBriefee !== etat.manche.numero) {
+    mancheBriefee = etat.manche.numero;
+    afficherBriefManche(etat.manche);
+  }
   $('btn-facil').hidden = !facilitateur;
   if (!facilitateur) $('panneau-facil').hidden = true;
 
   rendreBarrePostes($('barre-postes-jeu'), etat, moi);
+  $('btn-aide').hidden = !moi?.poste;
   rendreTableau($('tableau'), etat, net.joueurId, surCarte);
   dessinerCFD($('canvas-cfd'), etat.statsLive?.cfd, CONFIG.manches[etat.manche.numero - 1].duree);
 
@@ -221,6 +242,48 @@ function rendrePanneauFacilitateur(etat) {
       });
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Brief de manche et lexique
+// ---------------------------------------------------------------------------
+
+/**
+ * Affiche en plein écran les règles de la manche qui démarre.
+ * C'est une « politique explicite » vécue : tout le monde lit les mêmes
+ * règles au même moment, puis on joue.
+ */
+function afficherBriefManche(manche) {
+  const brief = CONFIG.briefsManche[manche.numero];
+  if (!brief) return;
+  const voile = $('voile-brief');
+  const boite = $('boite-brief');
+  const limites = manche.limitesWip
+    ? `<p class="brief-limites">Limites votées : ${POSTES
+        .map((p) => `${COLONNE_PAR_ID[p].nom} <b>${manche.limitesWip[p] ?? '∞'}</b>`)
+        .join(' · ')}</p>`
+    : '';
+  boite.innerHTML = `
+    <span class="brief-numero">Manche ${manche.numero}</span>
+    <h2>${manche.titre}</h2>
+    <p class="brief-accroche">${brief.accroche}</p>
+    <ul class="brief-regles">${brief.regles.map((r) => `<li>${r}</li>`).join('')}</ul>
+    ${limites}
+    <button class="btn btn-principal" id="btn-brief-go">C’est parti !</button>`;
+  voile.hidden = false;
+  const fermer = () => { voile.hidden = true; };
+  boite.querySelector('#btn-brief-go').addEventListener('click', fermer);
+  setTimeout(fermer, 9000); // se referme seul : la manche n'attend personne
+}
+
+function brancherLexique() {
+  $('contenu-lexique').innerHTML = CONFIG.lexique
+    .map(([mot, def]) => `<dt>${mot}</dt><dd>${def}</dd>`).join('');
+  $('btn-lexique').addEventListener('click', () => { $('voile-lexique').hidden = false; });
+  $('btn-fermer-lexique').addEventListener('click', () => { $('voile-lexique').hidden = true; });
+  $('voile-lexique').addEventListener('click', (e) => {
+    if (e.target === $('voile-lexique')) $('voile-lexique').hidden = true;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -302,13 +365,62 @@ function boucleAffichage() {
 
 function surEvenement(evt) {
   switch (evt.type) {
-    case 'commande':  sons.commande(); break;
-    case 'livre':     sons.livre(); break;
-    case 'rate':      sons.rate(); toast('😡 Un client a reçu un sushi raté !'); break;
-    case 'perime':    sons.perime(); toast(`🗑️ ${evt.nombre > 1 ? `${evt.nombre} sushis périmés` : 'Un sushi a périmé'} !`); break;
-    case 'expedite':  sons.expedite(); toast('🔥 Commande VIP ! Elle passe avant tout.'); break;
+    case 'commande':
+      sons.commande();
+      particules(evt.canal === 'livraison' ? '🛵' : '🏮', 'commandes', 1);
+      break;
+    case 'livre':
+      sons.livre();
+      particules('✨', 'livre', 3);
+      break;
+    case 'rate':
+      sons.rate(); toast('😡 Un client a reçu un sushi raté !');
+      particules('💢', 'livre', 2);
+      break;
+    case 'perime':
+      sons.perime();
+      toast(`🗑️ ${evt.nombre > 1 ? `${evt.nombre} sushis périmés` : 'Un sushi a périmé'} !`);
+      for (const colonne of evt.colonnes || []) particules('🦨', colonne, 1);
+      break;
+    case 'expedite':
+      sons.expedite(); toast('🔥 Commande VIP ! Elle passe avant tout.');
+      particules('🔥', 'commandes', 3);
+      break;
+    case 'aide':
+      sons.aide();
+      toast(`🙋 ${evt.avatar} ${evt.pseudo} appelle à l’aide : ${COLONNE_PAR_ID[evt.poste]?.nom} déborde !`);
+      clignoterColonne(evt.poste);
+      break;
     case 'finManche': sons.finManche(); break;
     default: break;
+  }
+}
+
+/** Fait scintiller brièvement une colonne (appel à l'aide). */
+function clignoterColonne(poste) {
+  const col = document.querySelector(`.colonne[data-colonne="${poste}"]`);
+  if (!col) return;
+  col.classList.add('appel');
+  setTimeout(() => col.classList.remove('appel'), 3200);
+}
+
+/**
+ * Petites particules émoji qui s'élèvent d'une colonne : le flux se fête.
+ * Purement cosmétique, purement DOM — aucune dépendance.
+ */
+function particules(emoji, colonneId, nombre = 2) {
+  const col = document.querySelector(`.colonne[data-colonne="${colonneId}"]`);
+  if (!col) return;
+  const rect = col.getBoundingClientRect();
+  for (let i = 0; i < nombre; i += 1) {
+    const p = document.createElement('span');
+    p.className = 'particule';
+    p.textContent = emoji;
+    p.style.left = `${rect.left + rect.width * (0.2 + Math.random() * 0.6)}px`;
+    p.style.top = `${rect.top + 40 + Math.random() * 60}px`;
+    p.style.animationDelay = `${i * 120}ms`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1600 + i * 120);
   }
 }
 

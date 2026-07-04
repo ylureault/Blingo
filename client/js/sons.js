@@ -47,5 +47,6 @@ export const sons = {
   rate()      { jouer([[196, 0.2], [185, 0.3, 0.1]], 'square', 0.03); },       // client mécontent
   expedite()  { jouer([[988, 0.09], [988, 0.09, 0.14], [1175, 0.14, 0.28]]); },// urgence VIP
   bloque()    { jouer([[330, 0.08]], 'square', 0.03); },                       // action refusée
+  aide()      { jouer([[880, 0.12], [880, 0.12, 0.2], [880, 0.12, 0.4]]); },   // cloche d'appel à l'aide
   finManche() { jouer([[784, 0.2], [659, 0.2, 0.18], [523, 0.35, 0.36]]); },   // gong de fin
 };

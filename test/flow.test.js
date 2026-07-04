@@ -283,6 +283,43 @@ test('une carte trop vieille périme et part au gâchis', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Coopération : entraide et canaux de commande
+// ---------------------------------------------------------------------------
+
+test('l’entraide raccourcit le geste ET la durée minimale anti-triche', () => {
+  const partie = partieDeTest('pull');
+  const joueur = joueurDeTest('riz');
+  const carte = creerCarte(partie, 'maki', false, 0);
+  carte.colonne = 'riz';
+  carte.etat = ETATS_CARTE.ATTENTE;
+  prendreCarte(partie, joueur, carte.id, 0);
+  // Un collègue au même poste : durée 3000 × 0.75 = 2250, minimum = 1350 ms
+  const r = commencerTravail(partie, joueur, carte.id, 0, true);
+  assert.equal(r.duree, 2250);
+  assert.equal(r.entraide, true);
+  // 1400 ms : refusé sans entraide (min 1800), accepté avec
+  const fin = terminerTravail(partie, joueur, carte.id, { reussi: true }, 1400);
+  assert.equal(fin.ok, true);
+});
+
+test('une commande en livraison périme plus vite qu’une commande en salle', () => {
+  const partie = partieDeTest('push');
+  const salle = creerCarte(partie, 'nigiri', false, 0, 'salle');       // 100 s
+  const livraison = creerCarte(partie, 'nigiri', false, 0, 'livraison'); // 80 s
+  perimerCartes(partie, 90_000, []);
+  assert.equal(partie.cartes.has(salle.id), true);       // encore bonne
+  assert.equal(partie.cartes.has(livraison.id), false);  // le scooter a trop attendu
+});
+
+test('les cartes en salle ont un numéro de table, pas celles en livraison', () => {
+  const partie = partieDeTest('push');
+  const table = creerCarte(partie, 'maki', false, 0, 'salle');
+  const scooter = creerCarte(partie, 'maki', false, 0, 'livraison');
+  assert.ok(table.table >= 1);
+  assert.equal(scooter.table, null);
+});
+
+// ---------------------------------------------------------------------------
 // Départ d'un joueur
 // ---------------------------------------------------------------------------
 

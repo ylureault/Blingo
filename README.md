@@ -1,5 +1,10 @@
 # 🍣 Sushi Kanban Game
 
+**Le jeu de référence pour vivre Kanban en équipe**, par
+[Insuffle Académie](https://insuffle-academie.com) — *on ne vous explique pas
+la facilitation, on la pratique avec vous.* En ligne sur
+**[kanban.insuffle-academie.com](https://kanban.insuffle-academie.com)**.
+
 Jeu web multijoueur temps réel pour faire vivre les fondamentaux de **Kanban**
 à une équipe en atelier (présentiel ou distanciel), inspiré du Pizza Kanban Game.
 3 manches de 5 minutes, 2 à 8 joueurs, **sans aucune inscription**, depuis un
@@ -11,9 +16,30 @@ navigateur desktop ou tablette.
 | 2 — Les limites WIP | Poussé + limites | Une colonne pleine bloque l'amont, il faut aider le goulot |
 | 3 — Le flux tiré | Pull + expedite | On ne prend que si l'aval a de la capacité, classes de service |
 
-Entre chaque manche, un **écran de débrief** compare throughput, lead time,
-gâchis, cycle time par poste et CFD — c'est là que la pédagogie se fait
-(questions d'animation incluses, voir [FACILITATION.md](FACILITATION.md)).
+Entre chaque manche, un **écran de débrief** compare throughput, lead time
+(moyenne, max **et distribution en histogramme**), gâchis, cycle time par
+poste et CFD, avec les questions d'animation et un encart « ce qu'il fallait
+voir » — c'est là que la pédagogie se fait (voir [FACILITATION.md](FACILITATION.md)).
+
+En plus du tableau :
+
+- **Deux canaux de commande**, comme dans un vrai resto japonais : la salle 🏮
+  (numéro de table) et la livraison 🛵 « Yatta Eats », dont la fraîcheur fond
+  20 % plus vite — deux SLA dans le même flux. Le mini-jeu de service change
+  de peau selon le canal (tables ou sacs de livreurs).
+- **Coopération entre les postes** : à 2+ joueurs sur un même poste, badge 🤝
+  et gestes 25 % plus rapides (aider le goulot paie mécaniquement) ; bouton
+  🙋 « À l'aide ! » qui fait scintiller le poste débordé chez tout le monde.
+- Un **brief de manche** plein écran annonce les politiques explicites au
+  coup d'envoi de chaque manche.
+- Un **lexique Kanban** ❓ (8 définitions) disponible à tout moment.
+- Un **mode projection** 📺 pour l'écran partagé de la salle d'atelier.
+- Des **animations partout** : cartes qui glissent (FLIP), colonnes pleines
+  qui vibrent, particules de célébration à la livraison, appels à l'aide qui
+  scintillent, lanternes qui se balancent.
+- Le débrief s'exporte en **bilan PDF** aux couleurs de l'atelier (bouton 🖨,
+  via l'impression du navigateur) pour que les participants repartent avec
+  leurs métriques.
 
 ## Installation et lancement
 
@@ -93,14 +119,17 @@ pm2 save && pm2 startup    # relance au démarrage de la machine
 L'état étant en mémoire, lancez **une seule instance** (pas de mode cluster) :
 les salles ne sont pas partagées entre processus.
 
-### nginx (reverse proxy avec upgrade WebSocket)
+### nginx — sous-domaine kanban.insuffle-academie.com (upgrade WebSocket)
 
-Socket.io a besoin que nginx laisse passer l'upgrade HTTP → WebSocket :
+1. Chez votre registrar, créez un enregistrement DNS
+   `kanban.insuffle-academie.com → A/AAAA` vers votre serveur.
+2. Socket.io a besoin que nginx laisse passer l'upgrade HTTP → WebSocket :
 
 ```nginx
+# /etc/nginx/sites-available/kanban.insuffle-academie.com
 server {
     listen 80;
-    server_name sushi.example.com;
+    server_name kanban.insuffle-academie.com;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -117,9 +146,16 @@ server {
 }
 ```
 
-Rechargez (`nginx -s reload`), et le jeu est accessible derrière le proxy —
-HTTPS via certbot fonctionne sans autre réglage (Socket.io passe en `wss://`
-automatiquement).
+```bash
+ln -s /etc/nginx/sites-available/kanban.insuffle-academie.com /etc/nginx/sites-enabled/
+nginx -t && nginx -s reload
+certbot --nginx -d kanban.insuffle-academie.com   # HTTPS : Socket.io passe en wss:// tout seul
+```
+
+Le lien à partager en atelier devient `https://kanban.insuffle-academie.com/ABCD`
+(le code de salle directement dans l'URL). Pensez à ajouter un lien
+« 🍣 Sushi Kanban » depuis le site principal insuffle-academie.com : le jeu
+lui renvoie déjà la pareille (accueil, lexique, débrief et bilan PDF).
 
 ## Qualité
 

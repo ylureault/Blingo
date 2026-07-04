@@ -114,8 +114,27 @@ export function attacherSockets(io) {
 
     socket.on(EVT.COMMENCER_TRAVAIL, ({ carteId } = {}, repondre) => {
       if (!enSalle(repondre)) return;
-      repondre?.(flow.commencerTravail(salle.partie, joueur, carteId, Date.now()));
+      // Bonus d'entraide : un collègue connecté au même poste accélère le geste
+      const entraide = [...salle.joueurs.values()]
+        .some((j) => j.id !== joueur.id && j.connecte && j.poste === joueur.poste);
+      repondre?.(flow.commencerTravail(salle.partie, joueur, carteId, Date.now(), entraide));
       diffuser(io, salle);
+    });
+
+    // Appel à l'aide : rien de mécanique, tout de social — le poste débordé
+    // le dit à voix haute et l'écran de toute l'équipe le montre.
+    socket.on(EVT.APPELER_AIDE, (_donnees, repondre) => {
+      if (!enSalle(repondre)) return;
+      if (!joueur.poste) return repondre?.({ ok: false, erreur: 'Choisissez d’abord un poste.' });
+      const maintenant = Date.now();
+      if (maintenant - (joueur.dernierAppel || 0) < CONFIG.entraide.cooldownAppel) {
+        return repondre?.({ ok: false, erreur: 'Vous venez d’appeler : laissez l’équipe réagir !' });
+      }
+      joueur.dernierAppel = maintenant;
+      io.to(salle.code).emit(EVT.EVENEMENT, {
+        type: 'aide', poste: joueur.poste, pseudo: joueur.pseudo, avatar: joueur.avatar,
+      });
+      repondre?.({ ok: true });
     });
 
     socket.on(EVT.TERMINER_TRAVAIL, ({ carteId, resultat } = {}, repondre) => {

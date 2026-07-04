@@ -125,6 +125,9 @@ export function resumerManche(stats, maintenant) {
     leadTimes: lead.valeurs,
     gachisPerimes: stats.gachis.filter((g) => g.raison === 'perime').length,
     gachisRates: stats.gachis.filter((g) => g.raison === 'rate').length,
+    // Répartition par canal : la salle et la livraison ne vivent pas le même SLA
+    livresSalle: stats.livrees.filter((l) => l.canal !== 'livraison').length,
+    livresLivraison: stats.livrees.filter((l) => l.canal === 'livraison').length,
     cycleTimes: cycleTimeParColonne(stats.livrees),
     cfd: stats.cfd,
   };

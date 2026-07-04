@@ -64,6 +64,7 @@ export const EVT = {
   PRENDRE_CARTE:     'c2s:prendreCarte',
   COMMENCER_TRAVAIL: 'c2s:commencerTravail',
   TERMINER_TRAVAIL:  'c2s:terminerTravail',
+  APPELER_AIDE:      'c2s:appelerAide',
   // Actions réservées au facilitateur
   FACIL_DEMARRER:    'c2s:facil:demarrerManche',
   FACIL_ARRETER:     'c2s:facil:arreterManche',

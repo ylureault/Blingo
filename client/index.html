@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sushi Kanban Game 🍣</title>
+  <title>Sushi Kanban — le jeu de référence pour vivre Kanban en équipe · Insuffle Académie</title>
+  <meta name="description" content="3 manches de 5 minutes pour vivre les fondamentaux de Kanban : flux poussé vs tiré, limites WIP, goulots, lead time et CFD. Multijoueur, sans inscription. Un jeu Insuffle Académie.">
+  <!-- Open Graph : partage du lien kanban.insuffle-academie.com -->
+  <meta property="og:title" content="Sushi Kanban — le jeu du flux · Insuffle Académie">
+  <meta property="og:description" content="Vivez les fondamentaux de Kanban en 30 minutes, en équipe, dans un restaurant de sushis débordé. Sans inscription.">
+  <meta property="og:url" content="https://kanban.insuffle-academie.com">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_FR">
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍣</text></svg>">
 </head>
@@ -30,6 +37,13 @@
         </div>
       </div>
       <p id="accueil-erreur" class="message-erreur" hidden></p>
+
+      <footer class="signature-insuffle">
+        <a href="https://insuffle-academie.com" target="_blank" rel="noopener">
+          <span class="insuffle-souffle">〜</span> Un jeu <b>Insuffle Académie</b>
+        </a>
+        <small>On ne vous explique pas la facilitation · on la pratique avec vous</small>
+      </footer>
     </div>
   </section>
 
@@ -62,15 +76,22 @@
         <span title="Sushis livrés">✅ <b id="stat-livres">0</b></span>
         <span title="Gâchis (périmés + ratés)">🗑️ <b id="stat-gachis">0</b></span>
         <span title="Débit (sushis / minute)">📈 <b id="stat-throughput">0.0</b>/min</span>
+        <span title="Lead time moyen (commande → livraison)">⏱️ <b id="stat-leadtime">—</b></span>
       </div>
       <div class="entete-boutons">
+        <button id="btn-projection" class="btn btn-icone" title="Mode projection (écran partagé en salle)">📺</button>
+        <button id="btn-lexique" class="btn btn-icone" title="Lexique Kanban">❓</button>
         <button id="btn-sons" class="btn btn-icone" title="Activer / couper les sons">🔊</button>
         <button id="btn-cfd" class="btn btn-icone" title="Afficher / masquer le CFD">📊</button>
         <button id="btn-facil" class="btn btn-icone" title="Panneau facilitateur" hidden>⚙️</button>
       </div>
     </header>
 
-    <div id="barre-postes-jeu" class="barre-postes barre-postes-jeu"></div>
+    <div class="zone-postes">
+      <div id="barre-postes-jeu" class="barre-postes barre-postes-jeu"></div>
+      <button id="btn-aide" class="btn btn-aide" hidden
+        title="Prévenir toute l’équipe que votre poste déborde">🙋 À l’aide !</button>
+    </div>
 
     <main id="tableau" class="tableau"></main>
 
@@ -109,6 +130,22 @@
       <div id="debrief-actions" class="debrief-actions"></div>
     </div>
   </section>
+
+  <!-- Brief de manche : les politiques explicites, annoncées avant de jouer -->
+  <div id="voile-brief" class="voile" hidden>
+    <div id="boite-brief" class="boite-brief"></div>
+  </div>
+
+  <!-- Lexique Kanban -->
+  <div id="voile-lexique" class="voile" hidden>
+    <div class="boite-lexique">
+      <button id="btn-fermer-lexique" class="btn btn-discret minijeu-fermer">✖</button>
+      <h3>❓ Le Kanban en 8 mots</h3>
+      <dl id="contenu-lexique"></dl>
+      <p class="signature-lexique">Pour aller plus loin :
+        <a href="https://insuffle-academie.com" target="_blank" rel="noopener">insuffle-academie.com</a></p>
+    </div>
+  </div>
 
   <!-- Notifications éphémères -->
   <div id="toasts" class="toasts"></div>
