@@ -48,12 +48,22 @@ export function creerSalle(pseudo, avatar) {
   return { salle, joueur: facilitateur };
 }
 
+/** Nettoie un pseudo : caractères de contrôle retirés, espaces normalisés. */
+export function nettoyerPseudo(pseudo) {
+  const propre = String(pseudo || '')
+    .replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028\u2029]/g, '') // caracteres de controle et invisibles
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 20);
+  return propre || 'Chef anonyme';
+}
+
 /** Crée un objet joueur. Le `jeton` secret permet la reconnexion. */
 export function creerJoueur(pseudo, avatar, estFacilitateur = false) {
   return {
     id: randomUUID().slice(0, 8),
     jeton: randomUUID(),         // secret partagé avec un seul navigateur
-    pseudo: String(pseudo || 'Anonyme').slice(0, 20),
+    pseudo: nettoyerPseudo(pseudo),
     avatar: avatar || '🍣',
     poste: null,                 // colonne-poste choisie (null = spectateur)
     carteActive: null,
@@ -86,6 +96,11 @@ export function rejoindreSalle(code, pseudo, avatar, jeton) {
   if (connectes >= CONFIG.salle.maxJoueurs) return { erreur: 'La salle est pleine.' };
 
   const joueur = creerJoueur(pseudo, avatar, false);
+  // Deux « Kenji » dans la même cuisine ? Le second devient « Kenji ² »
+  const pseudos = new Set([...salle.joueurs.values()].map((j) => j.pseudo));
+  let candidat = joueur.pseudo;
+  for (let n = 2; pseudos.has(candidat); n += 1) candidat = `${joueur.pseudo} ${'²³⁴⁵⁶⁷⁸'[n - 2] || n}`;
+  joueur.pseudo = candidat;
   salle.joueurs.set(joueur.id, joueur);
   salle.derniereActivite = Date.now();
   return { salle, joueur, reconnexion: false };

@@ -171,6 +171,7 @@ function deplacer(partie, carte, colonne, etat, maintenant) {
  */
 export function prendreCarte(partie, joueur, carteId, maintenant) {
   if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'La manche n’est pas en cours.' };
+  if (partie.enPause) return { ok: false, erreur: 'La manche est en pause.' };
   const carte = partie.cartes.get(carteId);
   if (!carte) return { ok: false, erreur: 'Cette carte n’existe plus.' };
   const poste = joueur.poste;
@@ -221,6 +222,7 @@ export function prendreCarte(partie, joueur, carteId, maintenant) {
  */
 export function commencerTravail(partie, joueur, carteId, maintenant, entraide = false) {
   if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'La manche n’est pas en cours.' };
+  if (partie.enPause) return { ok: false, erreur: 'La manche est en pause.' };
   const carte = partie.cartes.get(carteId);
   if (!carte || carte.proprietaire !== joueur.id || carte.etat !== ETATS_CARTE.ENCOURS) {
     return { ok: false, erreur: 'Cette carte n’est pas dans votre pile.' };
@@ -254,6 +256,7 @@ export function commencerTravail(partie, joueur, carteId, maintenant, entraide =
  */
 export function terminerTravail(partie, joueur, carteId, resultat, maintenant) {
   if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'La manche n’est pas en cours.' };
+  if (partie.enPause) return { ok: false, erreur: 'La manche est en pause.' };
   const carte = partie.cartes.get(carteId);
   if (!carte || carte.proprietaire !== joueur.id || joueur.carteActive !== carteId) {
     return { ok: false, erreur: 'Vous ne travaillez pas sur cette carte.' };
@@ -269,6 +272,9 @@ export function terminerTravail(partie, joueur, carteId, resultat, maintenant) {
   }
 
   const poste = carte.colonne;
+  // Temps réellement travaillé : la matière première de l'efficience du flux
+  // (temps de travail / lead time — le reste n'est que de l'attente)
+  carte.tempsTravaille = (carte.tempsTravaille || 0) + (maintenant - carte.travailDebut);
   joueur.carteActive = null;
   carte.travailDebut = null;
   carte.proprietaire = null;
@@ -365,6 +371,7 @@ export function livrer(partie, carte, maintenant) {
     id: carte.id, type: carte.type, expedite: carte.expedite, canal: carte.canal,
     creeLe: carte.creeLe, livreLe: maintenant,
     leadTime: maintenant - carte.creeLe,
+    tempsTravaille: carte.tempsTravaille || 0,
     sejours: carte.sejours, retours: carte.retours,
   });
   return { ok: true, consequence: 'livre' };

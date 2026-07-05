@@ -68,6 +68,10 @@ export const EVT = {
   // Actions réservées au facilitateur
   FACIL_DEMARRER:    'c2s:facil:demarrerManche',
   FACIL_ARRETER:     'c2s:facil:arreterManche',
+  FACIL_PAUSE:       'c2s:facil:pauserManche',
+  FACIL_PROLONGER:   'c2s:facil:prolongerManche',
+  FACIL_VIDER:       'c2s:facil:viderCommandes',
+  FACIL_TRANSFERT:   'c2s:facil:transfererRole',
   FACIL_WIP:         'c2s:facil:reglerWip',
   FACIL_DEBIT:       'c2s:facil:reglerDebit',
   FACIL_EXPEDITE:    'c2s:facil:injecterExpedite',

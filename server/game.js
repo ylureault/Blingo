@@ -38,6 +38,7 @@ export function demarrerManche(salle, numero, maintenant) {
   };
   partie.mancheJouee = numero;
   partie.statut = STATUTS.MANCHE;
+  partie.enPause = null;
   partie.debutManche = maintenant;
   partie.finManche = maintenant + partie.manche.duree;
   partie.cartes.clear();
@@ -53,10 +54,74 @@ export function demarrerManche(salle, numero, maintenant) {
   return { ok: true };
 }
 
+/**
+ * Met la manche en pause : plus rien ne bouge, ni le chrono, ni le spawn,
+ * ni la fraîcheur. À la reprise, toutes les horloges sont décalées de la
+ * durée de la pause — comme si elle n'avait jamais existé.
+ */
+export function pauserManche(salle, maintenant) {
+  const { partie } = salle;
+  if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'Aucune manche en cours.' };
+  if (partie.enPause) return { ok: false, erreur: 'La manche est déjà en pause.' };
+  partie.enPause = maintenant;
+  return { ok: true };
+}
+
+/** Reprend la manche après une pause (décale toutes les horloges). */
+export function reprendreManche(salle, maintenant) {
+  const { partie } = salle;
+  if (!partie.enPause) return { ok: false, erreur: 'La manche n’est pas en pause.' };
+  const delta = maintenant - partie.enPause;
+  partie.finManche += delta;
+  partie.debutManche += delta;
+  partie.stats.debut += delta;
+  salle.prochaineCommande += delta;
+  salle.dernierCFD += delta;
+  for (const carte of partie.cartes.values()) {
+    carte.creeLe += delta;
+    carte.dernierMouvement += delta;
+    if (carte.travailDebut != null) carte.travailDebut += delta;
+  }
+  partie.enPause = null;
+  return { ok: true };
+}
+
+/** Prolonge la manche en cours (le débrief attendra une minute de plus). */
+export function prolongerManche(salle, duree = CONFIG.affichage.prolongationManche) {
+  const { partie } = salle;
+  if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'Aucune manche en cours.' };
+  partie.finManche += duree;
+  return { ok: true, duree };
+}
+
+/**
+ * Vide la colonne Commandes (soupape de secours si le facilitateur a
+ * laissé le débit trop haut). Les cartes retirées ne comptent pas au gâchis.
+ */
+export function viderCommandes(salle) {
+  const { partie } = salle;
+  let retirees = 0;
+  for (const carte of [...partie.cartes.values()]) {
+    if (carte.colonne === 'commandes') { partie.cartes.delete(carte.id); retirees += 1; }
+  }
+  return { ok: true, retirees };
+}
+
+/** Transfère le rôle de facilitateur à un autre joueur connecté. */
+export function transfererRole(salle, joueurId) {
+  const cible = salle.joueurs.get(joueurId);
+  if (!cible || !cible.connecte) return { ok: false, erreur: 'Ce joueur n’est pas connecté.' };
+  for (const j of salle.joueurs.values()) j.estFacilitateur = false;
+  cible.estFacilitateur = true;
+  salle.facilitateurId = cible.id;
+  return { ok: true, pseudo: cible.pseudo };
+}
+
 /** Termine la manche en cours et bascule sur l'écran de débrief. */
 export function arreterManche(salle, maintenant) {
   const { partie } = salle;
   if (partie.statut !== STATUTS.MANCHE) return { ok: false, erreur: 'Aucune manche en cours.' };
+  if (partie.enPause) reprendreManche(salle, maintenant); // on solde la pause avant les stats
   partie.stats.fin = maintenant;
   echantillonnerCFD(partie.stats, maintenant); // dernier point du CFD
   partie.historique.push(resumerManche(partie.stats, maintenant));
@@ -75,7 +140,7 @@ export function arreterManche(salle, maintenant) {
 export function tick(salle, maintenant) {
   const { partie } = salle;
   const evenements = [];
-  if (partie.statut !== STATUTS.MANCHE) return evenements;
+  if (partie.statut !== STATUTS.MANCHE || partie.enPause) return evenements;
 
   // 1. Arrivée des commandes : la salle et les scooters Yatta Eats
   if (maintenant >= salle.prochaineCommande) {
@@ -188,6 +253,7 @@ export function serialiserEtat(salle, maintenant = Date.now()) {
       titre: partie.manche.titre,
       mode: partie.manche.mode,
       finA: partie.finManche,
+      enPause: !!partie.enPause,
       limitesWip: partie.manche.limitesWip,
       expediteActives: partie.manche.expediteActives,
       maxCartesParJoueur: partie.manche.maxCartesParJoueur,
@@ -197,6 +263,7 @@ export function serialiserEtat(salle, maintenant = Date.now()) {
       canal: c.canal, table: c.table,
       colonne: c.colonne, etat: c.etat, proprietaire: c.proprietaire,
       travailDebut: c.travailDebut, retours: c.retours,
+      dernierMouvement: c.dernierMouvement, // pour le sablier ⏳ des cartes bloquées
       // Le défaut n'est révélé qu'au moment du contrôle qualité
       defaut: c.colonne === 'qualite' ? c.defaut : undefined,
     })),

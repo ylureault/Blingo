@@ -50,8 +50,12 @@
   <!-- ══════════ ÉCRAN LOBBY ══════════ -->
   <section id="ecran-lobby" class="ecran" hidden>
     <div class="lobby-boite">
-      <h2>Salle <span id="lobby-code" class="code-salle"></span></h2>
-      <button id="btn-copier-lien" class="btn btn-discret">📋 Copier le lien d’invitation</button>
+      <h2>Salle <span id="lobby-code" class="code-salle" title="Cliquer pour copier le code" role="button" tabindex="0"></span></h2>
+      <div class="lobby-outils">
+        <button id="btn-copier-lien" class="btn btn-discret">📋 Copier le lien d’invitation</button>
+        <button id="btn-code-grand" class="btn btn-discret" title="Afficher le code en très grand pour le vidéoprojecteur">🖥 Code en grand</button>
+      </div>
+      <h3 id="lobby-compteur" class="lobby-compteur"></h3>
       <div id="lobby-joueurs" class="lobby-joueurs"></div>
       <div class="lobby-postes">
         <h3>Choisissez votre poste <small>(vous pourrez en changer à tout moment)</small></h3>
@@ -77,13 +81,14 @@
         <span title="Gâchis (périmés + ratés)">🗑️ <b id="stat-gachis">0</b></span>
         <span title="Débit (sushis / minute)">📈 <b id="stat-throughput">0.0</b>/min</span>
         <span title="Lead time moyen (commande → livraison)">⏱️ <b id="stat-leadtime">—</b></span>
+        <span title="Travail en cours : cartes sur le tableau">🗂️ <b id="stat-wip">0</b></span>
       </div>
       <div class="entete-boutons">
-        <button id="btn-projection" class="btn btn-icone" title="Mode projection (écran partagé en salle)">📺</button>
-        <button id="btn-lexique" class="btn btn-icone" title="Lexique Kanban">❓</button>
-        <button id="btn-sons" class="btn btn-icone" title="Activer / couper les sons">🔊</button>
-        <button id="btn-cfd" class="btn btn-icone" title="Afficher / masquer le CFD">📊</button>
-        <button id="btn-facil" class="btn btn-icone" title="Panneau facilitateur" hidden>⚙️</button>
+        <button id="btn-projection" class="btn btn-icone" title="Mode projection (écran partagé en salle)" aria-label="Mode projection">📺</button>
+        <button id="btn-lexique" class="btn btn-icone" title="Lexique Kanban" aria-label="Lexique Kanban">❓</button>
+        <button id="btn-sons" class="btn btn-icone" title="Volume : normal / doux / coupé" aria-label="Régler le volume des sons">🔊</button>
+        <button id="btn-cfd" class="btn btn-icone" title="Afficher / masquer le CFD" aria-label="Afficher ou masquer le diagramme de flux cumulé">📊</button>
+        <button id="btn-facil" class="btn btn-icone" title="Panneau facilitateur" aria-label="Panneau facilitateur" hidden>⚙️</button>
       </div>
     </header>
 
@@ -105,9 +110,18 @@
     <aside id="panneau-facil" class="panneau-facil" hidden>
       <h3>⚙️ Facilitateur</h3>
       <div class="facil-ligne">
-        <button id="facil-arreter" class="btn btn-danger">⏹ Arrêter la manche</button>
-        <button id="facil-expedite" class="btn btn-vip" hidden>🔥 Commande VIP</button>
+        <button id="facil-pause" class="btn" title="Geler chrono, commandes et fraîcheur">⏸ Pause</button>
+        <button id="facil-prolonger" class="btn" title="Prolonger la manche d’une minute">⏲ +1 min</button>
+        <button id="facil-arreter" class="btn btn-danger">⏹ Arrêter</button>
       </div>
+      <div class="facil-ligne">
+        <button id="facil-expedite" class="btn btn-vip" hidden>🔥 Commande VIP</button>
+        <button id="facil-vider" class="btn btn-discret" title="Vider la file des Commandes (soupape de secours)">🧹 Vider les commandes</button>
+      </div>
+      <p id="facil-danger" class="facil-goulot" hidden></p>
+      <label class="facil-ligne facil-transfert">Confier le rôle à
+        <select id="facil-transfert"></select>
+      </label>
       <label class="facil-ligne">Débit des commandes <span id="facil-debit-valeur">×1.0</span>
         <input id="facil-debit" type="range" min="0.5" max="2" step="0.1" value="1">
       </label>
@@ -146,6 +160,19 @@
         <a href="https://insuffle-academie.com" target="_blank" rel="noopener">insuffle-academie.com</a></p>
     </div>
   </div>
+
+  <!-- Code de salle en très grand (vidéoprojecteur) -->
+  <div id="voile-code" class="voile" hidden>
+    <div class="boite-code-grand">
+      <p>Rejoignez la partie sur</p>
+      <p id="code-grand-url" class="code-grand-url"></p>
+      <p id="code-grand" class="code-grand"></p>
+      <p class="lobby-aide">ou entrez ce code sur la page d’accueil — touchez pour fermer</p>
+    </div>
+  </div>
+
+  <!-- Bandeau de reconnexion -->
+  <div id="bandeau-connexion" class="bandeau-connexion" hidden>📡 Connexion perdue… reconnexion en cours</div>
 
   <!-- Notifications éphémères -->
   <div id="toasts" class="toasts"></div>

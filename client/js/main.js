@@ -7,7 +7,7 @@
  */
 
 import { EVT, POSTES, COLONNE_PAR_ID, AVATARS, STATUTS } from '/shared/constants.js';
-import { CONFIG } from '/shared/game-config.js';
+import { CONFIG, dureeVie } from '/shared/game-config.js';
 import { net } from './net.js';
 import { rendreTableau, rafraichirCartes } from './board.js';
 import { dessinerCFD } from './cfd.js';
@@ -27,26 +27,56 @@ let numeroMancheAffiche = 0; // pour ne reconstruire le panneau WIP qu'au change
 let mancheBriefee = 0;       // dernier brief de manche affiché
 
 function init() {
+  // Un avatar au hasard pour commencer : moins de doublons dans la salle
+  avatarChoisi = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+
   net.connecter();
-  construireChoixAvatars();
   brancherAccueil();
   brancherJeu();
   brancherLexique();
+  brancherClavier();
   net.onEtat(rendre);
   net.onEvenement(surEvenement);
+  net.onConnexion(surConnexion);
 
   // Lien direct /ABCD : pré-remplit le code
   const codeUrl = window.location.pathname.replace('/', '').toUpperCase();
   if (/^[A-Z]{4}$/.test(codeUrl)) $('champ-code').value = codeUrl;
 
-  // Session mémorisée (rechargement de page) : on retrouve notre place
+  // Session mémorisée (rechargement de page) : pseudo, avatar et place retrouvés
   const session = net.lireSession();
+  if (session?.avatar && AVATARS.includes(session.avatar)) avatarChoisi = session.avatar;
+  construireChoixAvatars();
   if (session && (!codeUrl || codeUrl === session.code)) {
     $('champ-pseudo').value = session.pseudo || '';
     net.socket.once('connect', () => { net.reprendreSession(); });
   }
 
+  $('btn-sons').textContent = sons.icone();
+
+  // On ne quitte pas la cuisine par accident en pleine manche
+  window.addEventListener('beforeunload', (e) => {
+    if (net.etat?.statut === STATUTS.MANCHE && net.moi()?.poste) e.preventDefault();
+  });
+
   requestAnimationFrame(boucleAffichage);
+}
+
+/** Pastille + bandeau de reconnexion : l'état réseau est toujours visible. */
+function surConnexion(connecte) {
+  $('bandeau-connexion').hidden = connecte;
+  if (connecte && net.etat) toast('📡 Connexion rétablie !');
+}
+
+/** Raccourcis clavier globaux : Échap ferme tout ce qui flotte. */
+function brancherClavier() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('voile-minijeu').hidden) fermerMiniJeu();
+    if (!$('voile-lexique').hidden) $('voile-lexique').hidden = true;
+    if (!$('voile-code').hidden) $('voile-code').hidden = true;
+    if (!$('voile-brief').hidden) $('voile-brief').hidden = true;
+  });
 }
 
 function construireChoixAvatars() {
@@ -85,7 +115,17 @@ function brancherAccueil() {
     const r = await net.rejoindre(code, pseudo(), avatarChoisi);
     if (!r.ok) erreur(r.erreur || 'Impossible de rejoindre.');
   });
+  // Le champ code se nettoie tout seul : lettres uniquement, en majuscules
+  $('champ-code').addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  });
   $('champ-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-rejoindre').click(); });
+  // Entrée dans le pseudo : rejoint si un code est saisi, crée sinon
+  $('champ-pseudo').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if ($('champ-code').value.length === 4) $('btn-rejoindre').click();
+    else $('btn-creer').click();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +146,10 @@ function rendre(etat) {
     case STATUTS.FIN:
       montrer('ecran-debrief');
       fermerMiniJeu();
+      gererWakeLock(false);
+      mancheBriefee = 0; // si on rejoue la même manche, son brief se remontre
+      numeroMancheAffiche = 0;
+      document.title = 'Débrief · Sushi Kanban — Insuffle Académie';
       rendreDebrief({
         titre: $('debrief-titre'), manches: $('debrief-manches'),
         questions: $('debrief-questions'), actions: $('debrief-actions'),
@@ -122,6 +166,9 @@ function rendre(etat) {
 function rendreLobby(etat) {
   $('lobby-code').textContent = etat.code;
   const moi = net.moi();
+
+  const connectes = etat.joueurs.filter((j) => j.connecte).length;
+  $('lobby-compteur').textContent = `Autour du comptoir : ${connectes}/${CONFIG.salle.maxJoueurs}`;
 
   $('lobby-joueurs').innerHTML = etat.joueurs.map((j) => `
     <div class="lobby-joueur ${j.connecte ? '' : 'deconnecte'}">
@@ -155,7 +202,7 @@ function rendreBarrePostes(zone, etat, moi) {
 
 function brancherJeu() {
   $('btn-sons').addEventListener('click', () => {
-    $('btn-sons').textContent = sons.basculer() ? '🔊' : '🔇';
+    $('btn-sons').textContent = sons.basculer(); // normal → doux → coupé
   });
   $('btn-cfd').addEventListener('click', () => $('coin-cfd').classList.toggle('replie'));
   // Mode projection : pour l'écran partagé (vidéoprojecteur / visio) — tout
@@ -172,6 +219,20 @@ function brancherJeu() {
     try { await navigator.clipboard.writeText(lien); toast(`Lien copié : ${lien}`); }
     catch { toast(lien); }
   });
+  // Le code lui-même se copie d'un clic (ou de la touche Entrée)
+  const copierCode = async () => {
+    try { await navigator.clipboard.writeText(net.etat?.code || ''); toast('Code copié !'); }
+    catch { /* pas de presse-papiers : le code reste affiché */ }
+  };
+  $('lobby-code').addEventListener('click', copierCode);
+  $('lobby-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') copierCode(); });
+  // Code en très grand pour le vidéoprojecteur de la salle
+  $('btn-code-grand').addEventListener('click', () => {
+    $('code-grand').textContent = net.etat?.code || '';
+    $('code-grand-url').textContent = window.location.host;
+    $('voile-code').hidden = false;
+  });
+  $('voile-code').addEventListener('click', () => { $('voile-code').hidden = true; });
   $('btn-lancer-m1').addEventListener('click', () => {
     net.action(EVT.FACIL_DEMARRER, { numero: 1 }).then(retourAction);
   });
@@ -180,11 +241,39 @@ function brancherJeu() {
   // Panneau facilitateur
   $('facil-arreter').addEventListener('click', () => net.action(EVT.FACIL_ARRETER).then(retourAction));
   $('facil-expedite').addEventListener('click', () => net.action(EVT.FACIL_EXPEDITE).then(retourAction));
+  $('facil-pause').addEventListener('click', () => net.action(EVT.FACIL_PAUSE).then(retourAction));
+  $('facil-prolonger').addEventListener('click', () => net.action(EVT.FACIL_PROLONGER).then(retourAction));
+  $('facil-vider').addEventListener('click', async () => {
+    const r = await net.action(EVT.FACIL_VIDER);
+    if (r.ok) toast(`🧹 ${r.retirees} commande(s) retirée(s) de la file.`);
+  });
+  $('facil-transfert').addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    net.action(EVT.FACIL_TRANSFERT, { joueurId: e.target.value }).then(retourAction);
+    e.target.value = '';
+  });
   $('facil-debit').addEventListener('input', (e) => {
     $('facil-debit-valeur').textContent = `×${Number(e.target.value).toFixed(1)}`;
     net.action(EVT.FACIL_DEBIT, { debit: Number(e.target.value) });
   });
 }
+
+// ----- Écran allumé pendant la manche (Wake Lock, silencieux si non géré) -----
+let verrouEcran = null;
+async function gererWakeLock(actif) {
+  try {
+    if (actif && !verrouEcran && navigator.wakeLock) {
+      verrouEcran = await navigator.wakeLock.request('screen');
+      verrouEcran.addEventListener('release', () => { verrouEcran = null; });
+    } else if (!actif && verrouEcran) {
+      await verrouEcran.release();
+      verrouEcran = null;
+    }
+  } catch { /* refusé par le navigateur : sans gravité */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && net.etat?.statut === STATUTS.MANCHE) gererWakeLock(true);
+});
 
 function rendreJeu(etat) {
   const moi = net.moi();
@@ -196,11 +285,14 @@ function rendreJeu(etat) {
   $('stat-throughput').textContent = (etat.statsLive?.throughput ?? 0).toFixed(1);
   const ltm = etat.statsLive?.leadTimeMoyen ?? 0;
   $('stat-leadtime').textContent = ltm > 0 ? `${Math.round(ltm / 1000)}s` : '—';
+  $('stat-wip').textContent = etat.cartes.length;
+  gererWakeLock(true); // l'écran reste allumé pendant la manche
 
   // Brief de manche : les politiques explicites, annoncées au coup d'envoi
   if (mancheBriefee !== etat.manche.numero) {
     mancheBriefee = etat.manche.numero;
     afficherBriefManche(etat.manche);
+    sons.gong();
   }
   $('btn-facil').hidden = !facilitateur;
   if (!facilitateur) $('panneau-facil').hidden = true;
@@ -216,11 +308,30 @@ function rendreJeu(etat) {
 function rendrePanneauFacilitateur(etat) {
   $('facil-expedite').hidden = !etat.manche.expediteActives;
   $('facil-debit').value = etat.reglages.debit;
+  $('facil-pause').textContent = etat.manche.enPause ? '▶ Reprendre' : '⏸ Pause';
 
   // Le goulot, visible du facilitateur seulement : levier d'animation
   const goulot = $('facil-goulot');
   goulot.hidden = !etat.goulot;
   if (etat.goulot) goulot.textContent = `🌊 Goulot probable : ${COLONNE_PAR_ID[etat.goulot].nom}`;
+
+  // Cartes en danger (fraîcheur sous le seuil d'alerte) : le pouls de la cuisine
+  const enDanger = etat.cartes.filter((c) => {
+    const vie = dureeVie(c.type, c.expedite, c.canal);
+    return 1 - (etat.maintenant - c.creeLe) / vie < CONFIG.affichage.seuilFraicheurAlerte;
+  }).length;
+  $('facil-danger').hidden = enDanger === 0;
+  if (enDanger > 0) $('facil-danger').textContent = `🚨 ${enDanger} sushi(s) en danger de péremption`;
+
+  // Liste de transfert du rôle (les autres joueurs connectés)
+  const options = etat.joueurs
+    .filter((j) => j.connecte && j.id !== net.joueurId)
+    .map((j) => `<option value="${j.id}">${j.avatar} ${j.pseudo}</option>`).join('');
+  const select = $('facil-transfert');
+  if (select.dataset.options !== options) { // ne pas casser un menu ouvert
+    select.dataset.options = options;
+    select.innerHTML = '<option value="">— choisir —</option>' + options;
+  }
 
   // Les champs WIP ne sont reconstruits qu'au changement de manche
   if (numeroMancheAffiche !== etat.manche.numero) {
@@ -313,6 +424,13 @@ async function ouvrirMiniJeu(carteId) {
   boite.innerHTML = '';
   const jeton = ++jetonMiniJeu;
 
+  // Jauge de fraîcheur de la carte, visible pendant tout le geste :
+  // le lead time continue de courir même quand on travaille
+  boite.dataset.creele = carte.creeLe;
+  boite.dataset.dureevie = dureeVie(carte.type, carte.expedite, carte.canal);
+  boite.insertAdjacentHTML('beforeend',
+    '<div class="minijeu-fraicheur" title="Fraîcheur restante de la commande"><div></div></div>');
+
   // Bouton pour reposer la carte (la progression est perdue : c'est le coût
   // du changement de contexte, voulu et assumé)
   const fermer = document.createElement('button');
@@ -329,6 +447,10 @@ async function ouvrirMiniJeu(carteId) {
     duree: r.duree,
   });
   if (jeton !== jetonMiniJeu) return; // mini-jeu abandonné entre-temps
+  fermer.disabled = true; // anti double-action pendant l'envoi du résultat
+
+  // Retour haptique sur tablette/mobile : succès bref, échec insistant
+  try { navigator.vibrate?.(resultat?.reussi === false ? [70, 40, 70] : 25); } catch { /* non géré */ }
 
   const reponse = await net.action(EVT.TERMINER_TRAVAIL, { carteId, resultat });
   if (!reponse.ok) toast(reponse.erreur);
@@ -345,18 +467,42 @@ function fermerMiniJeu() {
 // Boucle d'affichage continue (indépendante du serveur)
 // ---------------------------------------------------------------------------
 
+let derniereSecondeTic = -1;
+
 function boucleAffichage() {
   const etat = net.etat;
   if (etat?.statut === STATUTS.MANCHE) {
-    // Chrono de manche
-    const restant = Math.max(0, etat.manche.finA - net.maintenant());
-    const s = Math.ceil(restant / 1000);
-    $('jeu-chrono').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    $('jeu-chrono').classList.toggle('urgent', s <= 30);
-    // Fraîcheur et âges, entre deux états serveur
-    rafraichirCartes($('tableau'), net.maintenant());
+    if (etat.manche.enPause) {
+      // Manche gelée : le chrono le dit, rien d'autre ne bouge
+      $('jeu-chrono').textContent = '⏸';
+      $('jeu-chrono').classList.remove('urgent');
+      document.title = '⏸ En pause · Sushi Kanban';
+    } else {
+      const restant = Math.max(0, etat.manche.finA - net.maintenant());
+      const s = Math.ceil(restant / 1000);
+      const chrono = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      $('jeu-chrono').textContent = chrono;
+      $('jeu-chrono').classList.toggle('urgent', s <= 30);
+      // L'onglet du navigateur suit la partie (pratique en visio)
+      document.title = `${chrono} · ${etat.code} · Sushi Kanban`;
+      // Tic-tac des cinq dernières secondes
+      if (s <= 5 && s > 0 && s !== derniereSecondeTic) { derniereSecondeTic = s; sons.tick(); }
+      // Fraîcheur et âges, entre deux états serveur
+      rafraichirCartes($('tableau'), net.maintenant());
+      majFraicheurMiniJeu();
+    }
   }
   requestAnimationFrame(boucleAffichage);
+}
+
+/** Jauge de fraîcheur de la carte en cours, affichée DANS le mini-jeu. */
+function majFraicheurMiniJeu() {
+  const barre = document.querySelector('#boite-minijeu .minijeu-fraicheur div');
+  const boite = $('boite-minijeu');
+  if (!barre || !boite.dataset.creele) return;
+  const restant = Math.max(0, 1 - (net.maintenant() - Number(boite.dataset.creele)) / Number(boite.dataset.dureevie));
+  barre.style.width = `${restant * 100}%`;
+  barre.classList.toggle('fraicheur-critique', restant < 0.15);
 }
 
 // ---------------------------------------------------------------------------
@@ -390,6 +536,21 @@ function surEvenement(evt) {
       sons.aide();
       toast(`🙋 ${evt.avatar} ${evt.pseudo} appelle à l’aide : ${COLONNE_PAR_ID[evt.poste]?.nom} déborde !`);
       clignoterColonne(evt.poste);
+      break;
+    case 'pause':
+      toast('⏸ Manche en pause — chrono, commandes et fraîcheur sont gelés.');
+      break;
+    case 'reprise':
+      sons.gong(); toast('▶ La manche reprend !');
+      break;
+    case 'prolongation':
+      toast('⏲ Le facilitateur prolonge la manche d’une minute.');
+      break;
+    case 'transfert':
+      toast(`⚙️ ${evt.pseudo} est maintenant facilitateur·rice.`);
+      break;
+    case 'maintenance':
+      toast('🛠 Le serveur redémarre — reconnexion automatique dans un instant…');
       break;
     case 'finManche': sons.finManche(); break;
     default: break;

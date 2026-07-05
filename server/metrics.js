@@ -41,8 +41,23 @@ export function statsLeadTime(livrees) {
     moyenne: somme / valeurs.length,
     mediane,
     max: valeurs[valeurs.length - 1],
+    min: valeurs[0],
+    // p85 : la métrique de prévisibilité Kanban — « 85 % de nos sushis
+    // sortent en moins de X » vaut mieux qu'une moyenne qui ment
+    p85: valeurs[Math.min(valeurs.length - 1, Math.ceil(valeurs.length * 0.85) - 1)],
     valeurs,
   };
+}
+
+/**
+ * Efficience du flux : part du lead time réellement passée à travailler.
+ * Typiquement 5 à 15 % dans la vraie vie — le reste n'est que de l'attente.
+ */
+export function efficienceFlux(livrees) {
+  const valides = livrees.filter((l) => l.leadTime > 0);
+  if (valides.length === 0) return 0;
+  const somme = valides.reduce((s, l) => s + Math.min(1, (l.tempsTravaille || 0) / l.leadTime), 0);
+  return somme / valides.length;
 }
 
 /**
@@ -122,7 +137,11 @@ export function resumerManche(stats, maintenant) {
     leadTimeMoyen: lead.moyenne,
     leadTimeMediane: lead.mediane,
     leadTimeMax: lead.max,
+    leadTimeMin: lead.min ?? 0,
+    leadTimeP85: lead.p85 ?? 0,
     leadTimes: lead.valeurs,
+    efficience: efficienceFlux(stats.livrees),
+    retoursTotal: stats.livrees.reduce((s, l) => s + (l.retours || 0), 0),
     gachisPerimes: stats.gachis.filter((g) => g.raison === 'perime').length,
     gachisRates: stats.gachis.filter((g) => g.raison === 'rate').length,
     // Répartition par canal : la salle et la livraison ne vivent pas le même SLA

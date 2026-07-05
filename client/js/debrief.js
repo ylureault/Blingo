@@ -40,7 +40,11 @@ export function rendreDebrief({ titre, manches, questions, actions }, etat, estF
         ${metrique('🍣 Livrés', m.livres)}
         ${metrique('📈 Débit', `${m.throughput.toFixed(1)}/min`)}
         ${metrique('⏱️ Lead time moyen', fmtDuree(m.leadTimeMoyen))}
+        ${metrique('🎯 Lead time p85', fmtDuree(m.leadTimeP85), '', '85 % des sushis sont sortis en moins que ça : la vraie promesse client')}
+        ${metrique('🥇 Le plus rapide', fmtDuree(m.leadTimeMin))}
         ${metrique('⏱️ Lead time max', fmtDuree(m.leadTimeMax))}
+        ${metrique('⚡ Efficience du flux', m.efficience ? `${Math.round(m.efficience * 100)} %` : '—', '', 'Part du lead time réellement travaillée — le reste n’est que de l’attente')}
+        ${metrique('↩️ Retours (rework)', m.retoursTotal ?? 0, (m.retoursTotal ?? 0) > 0 ? 'mauvais' : '')}
         ${metrique('🗑️ Périmés', m.gachisPerimes, m.gachisPerimes > 0 ? 'mauvais' : '')}
         ${metrique('😡 Ratés livrés', m.gachisRates, m.gachisRates > 0 ? 'mauvais' : '')}
         ${metrique('🏮 Sur place', m.livresSalle ?? '—')}
@@ -78,6 +82,19 @@ export function rendreDebrief({ titre, manches, questions, actions }, etat, estF
   // ----- Actions -----
   actions.innerHTML = '';
 
+  // Fin de partie : les records de la salle, puis l'invitation au transfert
+  if (finie && historique.length > 0) {
+    const meilleureManche = historique.reduce((a, b) => (b.throughput > a.throughput ? b : a));
+    const meilleurLead = Math.min(...historique.map((m) => m.leadTimeMin || Infinity).filter(Number.isFinite));
+    const totalLivres = historique.reduce((s, m) => s + m.livres, 0);
+    actions.insertAdjacentHTML('beforebegin', `
+      <div class="records">
+        <div class="record">🏆 Meilleur débit<b>${meilleureManche.throughput.toFixed(1)}/min</b><small>manche ${meilleureManche.numero}</small></div>
+        <div class="record">⚡ Sushi éclair<b>${Number.isFinite(meilleurLead) ? fmtDuree(meilleurLead) : '—'}</b><small>meilleur lead time</small></div>
+        <div class="record">🍣 Total régalé<b>${totalLivres}</b><small>sushis livrés sur la partie</small></div>
+      </div>`);
+  }
+
   // Fin de partie : l'invitation à transformer le vécu en pratique
   if (finie) {
     actions.insertAdjacentHTML('beforebegin', `
@@ -96,19 +113,45 @@ export function rendreDebrief({ titre, manches, questions, actions }, etat, estF
   btnBilan.textContent = '🖨 Exporter le bilan (PDF)';
   btnBilan.addEventListener('click', () => window.print());
 
-  if (estFacilitateur && !finie) {
-    const prochaine = (derniere?.numero || 0) + 1;
-    if (prochaine <= CONFIG.manches.length) {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-principal';
-      btn.textContent = `Lancer la manche ${prochaine} — ${CONFIG.manches[prochaine - 1].titre}`;
-      btn.addEventListener('click', () => surAction('demarrer', prochaine));
-      actions.appendChild(btn);
+  // Export JSON : les métriques brutes, pour les facilitateurs data-curieux
+  const btnJson = document.createElement('button');
+  btnJson.className = 'btn btn-discret';
+  btnJson.textContent = '💾 Export JSON';
+  btnJson.title = 'Télécharger les métriques brutes des manches';
+  btnJson.addEventListener('click', () => {
+    const donnees = { jeu: 'Sushi Kanban', par: CONFIG.marque.nom, code: etat.code, manches: historique };
+    const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `sushi-kanban-bilan-${etat.code}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  if (estFacilitateur) {
+    if (!finie) {
+      const prochaine = (derniere?.numero || 0) + 1;
+      if (prochaine <= CONFIG.manches.length) {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-principal';
+        btn.textContent = `Lancer la manche ${prochaine} — ${CONFIG.manches[prochaine - 1].titre}`;
+        btn.addEventListener('click', () => surAction('demarrer', prochaine));
+        actions.appendChild(btn);
+      }
+    }
+    // Rejouer la même manche : précieux quand la leçon mérite un second tour
+    if (derniere) {
+      const btnBis = document.createElement('button');
+      btnBis.className = 'btn';
+      btnBis.textContent = `↻ Rejouer la manche ${derniere.numero}`;
+      btnBis.addEventListener('click', () => surAction('demarrer', derniere.numero));
+      actions.appendChild(btnBis);
     }
   } else if (!finie) {
     actions.innerHTML = '<p class="lobby-aide">Discutez ! Le facilitateur lancera la suite.</p>';
   }
   actions.appendChild(btnBilan);
+  actions.appendChild(btnJson);
 
   // Signature de bas de page (visible à l'écran ET sur le bilan imprimé)
   if (!actions.parentElement.querySelector('.signature-insuffle')) {
@@ -142,8 +185,8 @@ function histogrammeLeadTime(leadTimes) {
     </div>`).join('')}</div>`;
 }
 
-function metrique(nom, valeur, classe = '') {
-  return `<div class="metrique ${classe}"><span>${nom}</span><b>${valeur}</b></div>`;
+function metrique(nom, valeur, classe = '', infobulle = '') {
+  return `<div class="metrique ${classe}" ${infobulle ? `title="${infobulle}"` : ''}><span>${nom}</span><b>${valeur}</b></div>`;
 }
 
 function barresCycles(cycleTimes) {

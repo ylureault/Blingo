@@ -12,7 +12,11 @@ import {
   echantillonnerCFD, detecterGoulot, resumerManche, wipParColonne,
 } from '../server/metrics.js';
 import { creerPartie, creerCarte } from '../server/flow.js';
-import { demarrerManche, arreterManche, tick, reglerWip, reglerDebit } from '../server/game.js';
+import {
+  demarrerManche, arreterManche, tick, reglerWip, reglerDebit,
+  pauserManche, reprendreManche, prolongerManche, viderCommandes, transfererRole,
+} from '../server/game.js';
+import { nettoyerPseudo, creerSalle, rejoindreSalle } from '../server/rooms.js';
 
 // ---------------------------------------------------------------------------
 // Lead time
@@ -196,14 +200,104 @@ test('le débit est borné entre les limites de la config', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Pause, prolongation, soupape et transfert de rôle
+// ---------------------------------------------------------------------------
+
+test('la pause gèle tout et la reprise décale toutes les horloges', () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 1, 0);
+  const carte = creerCarte(salle.partie, 'maki', false, 1000);
+  const finAvant = salle.partie.finManche;
+
+  assert.equal(pauserManche(salle, 10_000).ok, true);
+  assert.deepEqual(tick(salle, 20_000), []); // rien ne bouge pendant la pause
+  assert.equal(salle.partie.cartes.size, 1); // pas de spawn, pas de péremption
+
+  assert.equal(reprendreManche(salle, 40_000).ok, true); // 30 s de pause
+  assert.equal(salle.partie.finManche, finAvant + 30_000);
+  assert.equal(carte.creeLe, 31_000); // la fraîcheur n'a pas vieilli pendant la pause
+});
+
+test('impossible de jouer pendant la pause', async () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 1, 0);
+  pauserManche(salle, 5000);
+  const { prendreCarte } = await import('../server/flow.js');
+  const carte = creerCarte(salle.partie, 'maki', false, 0);
+  const joueur = { id: 'j1', poste: 'riz', carteActive: null };
+  assert.equal(prendreCarte(salle.partie, joueur, carte.id, 6000).ok, false);
+});
+
+test('prolonger la manche repousse la fin d’une minute', () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 1, 0);
+  const finAvant = salle.partie.finManche;
+  assert.equal(prolongerManche(salle).ok, true);
+  assert.equal(salle.partie.finManche, finAvant + 60_000);
+});
+
+test('vider les commandes ne touche qu’à la colonne Commandes', () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 1, 0);
+  creerCarte(salle.partie, 'maki', false, 0);
+  const enRiz = creerCarte(salle.partie, 'maki', false, 0);
+  enRiz.colonne = 'riz';
+  const r = viderCommandes(salle);
+  assert.equal(r.retirees, 1);
+  assert.equal(salle.partie.cartes.size, 1);
+});
+
+test('le transfert de rôle change le facilitateur', () => {
+  const { salle } = creerSalle('Yoan', '🍣');
+  const { joueur } = rejoindreSalle(salle.code, 'Kenji', '🍤');
+  const r = transfererRole(salle, joueur.id);
+  assert.equal(r.ok, true);
+  assert.equal(salle.facilitateurId, joueur.id);
+});
+
+// ---------------------------------------------------------------------------
+// Pseudos : nettoyage et déduplication
+// ---------------------------------------------------------------------------
+
+test('les pseudos sont nettoyés (contrôles, espaces) et jamais vides', () => {
+  assert.equal(nettoyerPseudo('  Yoan   Lu  '), 'Yoan Lu');
+  assert.equal(nettoyerPseudo('​'), 'Chef anonyme');
+  assert.equal(nettoyerPseudo(null), 'Chef anonyme');
+});
+
+test('deux homonymes dans la même salle sont distingués', () => {
+  const { salle } = creerSalle('Kenji', '🍣');
+  const a = rejoindreSalle(salle.code, 'Kenji', '🍤');
+  assert.notEqual(a.joueur.pseudo, 'Kenji');
+  assert.match(a.joueur.pseudo, /^Kenji/);
+});
+
+// ---------------------------------------------------------------------------
 // Résumé de manche (écran de débrief)
 // ---------------------------------------------------------------------------
+
+test('p85 : la métrique de prévisibilité pointe la traîne, pas la moyenne', () => {
+  const livrees = Array.from({ length: 20 }, (_, i) => ({ leadTime: (i + 1) * 1000 }));
+  const s = statsLeadTime(livrees);
+  assert.equal(s.p85, 17_000); // 85 % des 20 valeurs ≤ la 17e
+  assert.equal(s.min, 1000);
+});
+
+test('l’efficience du flux rapporte le temps travaillé au lead time', async () => {
+  const { efficienceFlux } = await import('../server/metrics.js');
+  const livrees = [
+    { leadTime: 10_000, tempsTravaille: 1000 },  // 10 %
+    { leadTime: 20_000, tempsTravaille: 6000 },  // 30 %
+  ];
+  assert.equal(efficienceFlux(livrees), 0.2);
+  assert.equal(efficienceFlux([]), 0);
+});
 
 test('le résumé de manche agrège livraisons, gâchis et lead time', () => {
   const stats = creerStats(1, 'push', 0);
   stats.fin = 300_000;
-  stats.livrees.push({ leadTime: 10_000, sejours: { riz: 4000 } });
-  stats.livrees.push({ leadTime: 20_000, sejours: { riz: 6000 } });
+  stats.livrees.push({ leadTime: 10_000, sejours: { riz: 4000 }, retours: 1, tempsTravaille: 2000 });
+  stats.livrees.push({ leadTime: 20_000, sejours: { riz: 6000 }, retours: 0, tempsTravaille: 4000 });
   stats.gachis.push({ raison: 'perime' });
   stats.gachis.push({ raison: 'rate' });
   stats.livrees[0].canal = 'salle';
@@ -217,4 +311,7 @@ test('le résumé de manche agrège livraisons, gâchis et lead time', () => {
   assert.equal(r.gachisRates, 1);
   assert.equal(r.cycleTimes.riz, 5000);
   assert.equal(r.throughput, 2 / 5); // 2 sushis en 5 minutes
+  assert.equal(r.retoursTotal, 1);
+  assert.equal(r.leadTimeMin, 10_000);
+  assert.ok(r.efficience > 0);
 });

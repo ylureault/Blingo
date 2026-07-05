@@ -19,6 +19,7 @@ class Reseau {
     this.decalage = 0;         // horloge serveur − horloge locale
     this.abonnesEtat = [];
     this.abonnesEvenement = [];
+    this.abonnesConnexion = []; // rappelés avec true (connecté) / false (perdu)
   }
 
   /** Heure serveur estimée (pour le chrono et la fraîcheur). */
@@ -44,10 +45,14 @@ class Reseau {
     });
     // Reconnexion Socket.io : on retente de rejoindre avec notre jeton
     this.socket.io.on('reconnect', () => this.reprendreSession());
+    // Signal de connexion pour le bandeau et la pastille d'état
+    this.socket.on('connect', () => { for (const cb of this.abonnesConnexion) cb(true); });
+    this.socket.on('disconnect', () => { for (const cb of this.abonnesConnexion) cb(false); });
   }
 
   onEtat(cb) { this.abonnesEtat.push(cb); }
   onEvenement(cb) { this.abonnesEvenement.push(cb); }
+  onConnexion(cb) { this.abonnesConnexion.push(cb); }
 
   /** Envoie une action et renvoie la réponse serveur { ok, erreur? }. */
   action(evenement, donnees = {}) {

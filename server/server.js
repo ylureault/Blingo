@@ -14,6 +14,8 @@ import http from 'node:http';
 import express from 'express';
 import { Server } from 'socket.io';
 import { attacherSockets } from './sockets.js';
+import { salles } from './rooms.js';
+import { EVT } from '../shared/constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const racine = path.join(__dirname, '..');
@@ -37,9 +39,39 @@ app.get('/:code([A-Za-z]{4})', (_req, res) => {
   res.sendFile(path.join(racine, 'client', 'index.html'));
 });
 
+// Bilan de santé pour la supervision (PM2, nginx, uptime-robot…)
+app.get('/sante', (_req, res) => {
+  let joueursConnectes = 0;
+  for (const salle of salles.values()) {
+    joueursConnectes += [...salle.joueurs.values()].filter((j) => j.connecte).length;
+  }
+  res.json({
+    ok: true,
+    salles: salles.size,
+    joueurs: joueursConnectes,
+    uptime: Math.round(process.uptime()),
+  });
+});
+
+// Toute route inconnue ramène poliment à l'accueil (pas de 404 brute)
+app.use((_req, res) => res.redirect('/'));
+
 attacherSockets(io);
 
 const PORT = Number(process.env.PORT) || 3000;
 serveurHttp.listen(PORT, () => {
   console.log(`🍣 Sushi Kanban Game prêt sur http://localhost:${PORT}`);
 });
+
+// Arrêt propre (déploiement PM2, reboot) : on prévient les joueurs avant de couper
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => {
+    console.log(`\nArrêt demandé (${signal}) — au revoir 🍶`);
+    io.emit(EVT.EVENEMENT, { type: 'maintenance' });
+    setTimeout(() => {
+      io.close();
+      serveurHttp.close(() => process.exit(0));
+      setTimeout(() => process.exit(0), 1000).unref(); // filet de sécurité
+    }, 300);
+  });
+}

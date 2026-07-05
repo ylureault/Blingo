@@ -623,6 +623,97 @@ body.projection .tableau { padding-bottom: 240px; }
 }
 .toast.visible { opacity: 1; transform: translateY(0); }
 
+/* ── Micro-composants (la couche de finition) ────────────────────── */
+
+/* Lobby : outils et compteur */
+.lobby-outils { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.lobby-compteur { font-size: .95em; color: var(--washi-doux); font-weight: 400; }
+.code-salle { cursor: pointer; }
+.code-salle:hover { border-color: var(--or); }
+
+/* Code en très grand pour le vidéoprojecteur */
+.boite-code-grand {
+  text-align: center; color: var(--washi); cursor: pointer;
+  display: flex; flex-direction: column; gap: 10px; padding: 30px;
+}
+.code-grand-url { font-size: clamp(1.4em, 4vw, 2.6em); color: var(--or); }
+.code-grand {
+  font-size: clamp(4em, 22vw, 13em); font-weight: 700; letter-spacing: .18em;
+  color: var(--washi); text-shadow: 0 0 60px rgba(199, 62, 58, .55);
+  line-height: 1;
+}
+
+/* Bandeau de reconnexion */
+.bandeau-connexion {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 90;
+  background: var(--shu); color: var(--washi); text-align: center;
+  padding: 8px; font-weight: 700; animation: pulsation 1.4s infinite;
+}
+
+/* File des commandes repliée */
+.file-compacte {
+  text-align: center; font-size: .78em; color: var(--alerte);
+  background: rgba(224, 168, 50, .08); border: 1px dashed rgba(224, 168, 50, .5);
+  border-radius: 8px; padding: 8px 6px;
+}
+
+/* Progression du travail en cours sur la carte */
+.travail-progression { height: 4px; background: #0f0b08; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.travail-progression div { height: 100%; width: 0; background: var(--or); border-radius: 2px; }
+
+/* Flash vert : le travail vient d'être terminé */
+.vient-de-finir { animation: fini-flash .9s ease-out; }
+@keyframes fini-flash {
+  0% { box-shadow: 0 0 0 rgba(122, 166, 97, 0); }
+  30% { box-shadow: 0 0 22px rgba(122, 166, 97, .8); border-color: var(--matcha); }
+  100% { box-shadow: 0 0 0 rgba(122, 166, 97, 0); }
+}
+
+/* Halo pulsant des commandes VIP */
+.carte.expedite { animation: halo-vip 1.6s ease-in-out infinite; }
+@keyframes halo-vip {
+  0%, 100% { box-shadow: 0 3px 8px rgba(0, 0, 0, .35); }
+  50% { box-shadow: 0 0 16px rgba(224, 168, 50, .55); }
+}
+
+/* Icône d'ambiance des colonnes, sablier des cartes bloquées */
+.colonne-icone { opacity: .8; }
+.carte-sablier { color: var(--alerte); }
+
+/* Compteur de découpe et jauge de fraîcheur du mini-jeu */
+.decoupe-compteur { color: var(--or); font-weight: 700; margin-left: 8px; }
+.minijeu-fraicheur {
+  position: absolute; top: 0; left: 14px; right: 14px; height: 4px;
+  background: rgba(0, 0, 0, .4); border-radius: 0 0 4px 4px; overflow: hidden;
+}
+.minijeu-fraicheur div { height: 100%; width: 100%; background: var(--matcha); transition: width .2s linear; }
+.minijeu-fraicheur div.fraicheur-critique { background: var(--shu-vif); }
+
+/* Records de fin de partie */
+.records { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.record {
+  text-align: center; background: #211a13; border: 1px solid var(--or);
+  border-radius: 12px; padding: 14px 10px; display: flex; flex-direction: column; gap: 4px;
+}
+.record b { font-size: 1.5em; color: var(--or); }
+.record small { color: var(--washi-doux); }
+
+/* Sélecteur de transfert du rôle */
+.facil-transfert select {
+  flex: 1; font: inherit; color: var(--washi); background: #0f0b08;
+  border: 1px solid var(--veinure); border-radius: 8px; padding: 6px 8px;
+}
+
+/* Focus clavier bien visible partout */
+:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+
+/* ── Réduction des animations si demandée par le système ────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .particule { display: none; }
+}
+
 /* ── Responsive (tablette) ───────────────────────────────────────── */
 
 @media (max-width: 1100px) {
@@ -634,4 +725,44 @@ body.projection .tableau { padding-bottom: 240px; }
   .jeu-entete { font-size: .9em; }
   .panneau-facil { width: 240px; }
   .qc-comparaison { flex-direction: column; align-items: center; }
+}
+
+/* ── Responsive (mobile) : colonnes en carrousel, tout au pouce ──── */
+
+@media (max-width: 700px) {
+  .ecran { padding: 8px; }
+
+  /* Le tableau devient un carrousel : une colonne bien lisible à la fois,
+     on glisse horizontalement pour suivre le flux */
+  .tableau {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+    gap: 8px; padding-bottom: 130px; -webkit-overflow-scrolling: touch;
+  }
+  .colonne { flex: 0 0 74vw; scroll-snap-align: start; min-height: 44vh; }
+
+  .jeu-entete { padding: 6px 10px; gap: 6px; }
+  .entete-stats { gap: 10px; font-size: .82em; flex-wrap: wrap; }
+  .chrono { font-size: 1.25em; margin-left: 8px; }
+  .entete-boutons .btn-icone { padding: 8px 10px; }
+
+  /* Cibles tactiles confortables */
+  .poste-chip, .btn { min-height: 40px; }
+  .carte { padding: 8px 10px 12px; }
+
+  .coin-cfd { left: 8px; right: 8px; bottom: 8px; }
+  .coin-cfd canvas { width: 100%; height: 96px; }
+  .panneau-facil { left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 58vh; overflow-y: auto; }
+
+  .boite-minijeu { padding: 18px 14px; }
+  .salle-clients { gap: 8px; flex-wrap: wrap; }
+  .accueil-boite, .lobby-boite, .debrief-boite { padding: 20px 16px; }
+  .titre-jeu { font-size: 1.5rem; }
+
+  /* Taille 16px minimum : évite le zoom automatique d'iOS sur les champs */
+  input[type="text"], input[type="number"], select { font-size: 16px; }
+
+  .toasts { left: 10px; right: 10px; transform: none; width: auto; }
+  .debrief-manches { grid-template-columns: 1fr; }
+  .boite-brief { padding: 22px 16px; }
+  .boite-brief h2 { font-size: 1.5em; }
 }

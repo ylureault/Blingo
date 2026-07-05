@@ -14,8 +14,10 @@ export function jouerDecoupe(conteneur, { duree }) {
   return new Promise((resoudre) => {
     conteneur.innerHTML = `
       <h3>🔪 Découpe du poisson</h3>
-      <p class="minijeu-consigne">Tranchez les lignes <b>dans l’ordre</b> dès qu’elles brillent.</p>
+      <p class="minijeu-consigne">Tranchez les lignes <b>dans l’ordre</b> dès qu’elles brillent.
+        <span class="decoupe-compteur">0/${NB_LIGNES}</span></p>
     `;
+    const compteur = conteneur.querySelector('.decoupe-compteur');
     const planche = el('div', 'planche-decoupe');
     // Le poisson : une belle pièce de saumon en SVG
     planche.innerHTML = `
@@ -65,6 +67,7 @@ export function jouerDecoupe(conteneur, { duree }) {
           ligne.classList.add('coupee');
           ligne.disabled = true;
           coupees += 1;
+          compteur.textContent = `${coupees}/${NB_LIGNES}`;
           if (coupees === NB_LIGNES) terminer(true, '🎌 Découpe impeccable !');
         });
         planche.appendChild(ligne);

@@ -15,7 +15,7 @@ export function jouerRiz(conteneur, { duree }) {
   return new Promise((resoudre) => {
     conteneur.innerHTML = `
       <h3>🍚 Préparation du riz</h3>
-      <p class="minijeu-consigne">Maintenez <b>CUIRE</b> et relâchez dans la zone verte.</p>
+      <p class="minijeu-consigne">Maintenez <b>CUIRE</b> (ou la barre d’espace) et relâchez dans la zone verte.</p>
       <div class="jauge-riz">
         <div class="jauge-zone" style="left:${ZONE_MIN * 100}%; width:${(ZONE_MAX - ZONE_MIN) * 100}%"></div>
         <div class="jauge-remplissage"></div>
@@ -36,6 +36,8 @@ export function jouerRiz(conteneur, { duree }) {
 
     const terminer = (reussi, message) => {
       cancelAnimationFrame(horloge);
+      document.removeEventListener('keydown', surTouche);
+      document.removeEventListener('keyup', surRelache);
       bouton.disabled = true;
       const verdict = el('p', `minijeu-verdict ${reussi ? 'bon' : 'mauvais'}`, message);
       conteneur.appendChild(verdict);
@@ -54,12 +56,7 @@ export function jouerRiz(conteneur, { duree }) {
     };
     horloge = requestAnimationFrame((t) => { precedent = t; boucle(t); });
 
-    bouton.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      bouton.setPointerCapture(e.pointerId);
-      enCuisson = true;
-    });
-    bouton.addEventListener('pointerup', () => {
+    const relacher = () => {
       if (!enCuisson) return;
       enCuisson = false;
       if (progression >= ZONE_MIN && progression <= ZONE_MAX) {
@@ -69,6 +66,23 @@ export function jouerRiz(conteneur, { duree }) {
       } else {
         terminer(false, '💨 Trop cuit ! On recommence.');
       }
+    };
+
+    bouton.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      bouton.setPointerCapture(e.pointerId);
+      enCuisson = true;
     });
+    bouton.addEventListener('pointerup', relacher);
+
+    // Accessibilité clavier : la barre d'espace cuit aussi bien que la souris
+    const surTouche = (e) => {
+      if (e.code !== 'Space' || e.repeat) return;
+      e.preventDefault();
+      enCuisson = true;
+    };
+    const surRelache = (e) => { if (e.code === 'Space') relacher(); };
+    document.addEventListener('keydown', surTouche);
+    document.addEventListener('keyup', surRelache);
   });
 }

@@ -108,6 +108,7 @@ export function attacherSockets(io) {
 
     socket.on(EVT.PRENDRE_CARTE, ({ carteId } = {}, repondre) => {
       if (!enSalle(repondre)) return;
+      salle.derniereActivite = Date.now(); // la salle vit tant qu'on y joue
       repondre?.(flow.prendreCarte(salle.partie, joueur, carteId, Date.now()));
       diffuser(io, salle);
     });
@@ -139,6 +140,7 @@ export function attacherSockets(io) {
 
     socket.on(EVT.TERMINER_TRAVAIL, ({ carteId, resultat } = {}, repondre) => {
       if (!enSalle(repondre)) return;
+      salle.derniereActivite = Date.now();
       const reponse = flow.terminerTravail(salle.partie, joueur, carteId, resultat, Date.now());
       repondre?.(reponse);
       if (reponse.consequence === 'livre') io.to(salle.code).emit(EVT.EVENEMENT, { type: 'livre' });
@@ -163,6 +165,42 @@ export function attacherSockets(io) {
     socket.on(EVT.FACIL_ARRETER, (_donnees, repondre) => {
       if (!estFacilitateur(repondre)) return;
       repondre?.(game.arreterManche(salle, Date.now()));
+      diffuser(io, salle);
+    });
+
+    // Pause / reprise : le chrono, le spawn et la fraîcheur gèlent ensemble
+    socket.on(EVT.FACIL_PAUSE, (_donnees, repondre) => {
+      if (!estFacilitateur(repondre)) return;
+      const enPause = !!salle.partie.enPause;
+      const reponse = enPause
+        ? game.reprendreManche(salle, Date.now())
+        : game.pauserManche(salle, Date.now());
+      repondre?.(reponse);
+      if (reponse.ok) io.to(salle.code).emit(EVT.EVENEMENT, { type: enPause ? 'reprise' : 'pause' });
+      diffuser(io, salle);
+    });
+
+    socket.on(EVT.FACIL_PROLONGER, (_donnees, repondre) => {
+      if (!estFacilitateur(repondre)) return;
+      const reponse = game.prolongerManche(salle);
+      repondre?.(reponse);
+      if (reponse.ok) io.to(salle.code).emit(EVT.EVENEMENT, { type: 'prolongation' });
+      diffuser(io, salle);
+    });
+
+    socket.on(EVT.FACIL_VIDER, (_donnees, repondre) => {
+      if (!estFacilitateur(repondre)) return;
+      repondre?.(game.viderCommandes(salle));
+      diffuser(io, salle);
+    });
+
+    socket.on(EVT.FACIL_TRANSFERT, ({ joueurId } = {}, repondre) => {
+      if (!estFacilitateur(repondre)) return;
+      const reponse = game.transfererRole(salle, joueurId);
+      repondre?.(reponse);
+      if (reponse.ok) {
+        io.to(salle.code).emit(EVT.EVENEMENT, { type: 'transfert', pseudo: reponse.pseudo });
+      }
       diffuser(io, salle);
     });
 

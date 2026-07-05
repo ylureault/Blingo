@@ -153,6 +153,14 @@ export const CONFIG = {
     cooldownAppel: 8000,    // délai minimal entre deux appels à l'aide d'un même joueur
   },
 
+  // ---------- Affichage (petits seuils d'interface) ----------
+  affichage: {
+    compactCommandesAuDela: 5,  // au-delà, la colonne Commandes se replie (+N en attente)
+    seuilSablier: 15_000,       // une carte immobile depuis 15 s affiche un sablier ⏳
+    seuilFraicheurAlerte: 0.35, // sous 35 % de fraîcheur : compteur « en danger » du facilitateur
+    prolongationManche: 60_000, // durée ajoutée par le bouton « +1 min » du facilitateur
+  },
+
   // ---------- Anti-triche ----------
   antiTriche: {
     // Le serveur refuse un « travail terminé » envoyé avant ce ratio de la durée

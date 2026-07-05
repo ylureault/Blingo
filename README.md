@@ -106,6 +106,16 @@ WIP par défaut, probabilité de défaut, etc. Le facilitateur peut en plus
 ajuster **en direct** le débit, les limites WIP et injecter des commandes VIP
 depuis son panneau ⚙️.
 
+## Aller plus loin
+
+- **[FEATURES.md](FEATURES.md)** — les 50 micro-fonctionnalités de finition
+  (pause de manche, p85, efficience du flux, mode mobile, exports…).
+- **[DEPLOIEMENT.md](DEPLOIEMENT.md)** — le guide de mise en production
+  pas à pas sur kanban.insuffle-academie.com (DNS, PM2, nginx, HTTPS,
+  supervision, dépannage).
+- **[FACILITATION.md](FACILITATION.md)** — le guide d'animation andragogique :
+  on n'explique pas Kanban, on le fait vivre, et le débrief fait le reste.
+
 ## Déploiement (PM2 + nginx)
 
 ### PM2
