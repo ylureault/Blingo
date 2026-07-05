@@ -176,6 +176,11 @@ export function prendreCarte(partie, joueur, carteId, maintenant) {
   if (!carte) return { ok: false, erreur: 'Cette carte n’existe plus.' };
   const poste = joueur.poste;
   if (!poste) return { ok: false, erreur: 'Choisissez d’abord un poste.' };
+  if ((joueur.enDeplacementJusqua || 0) > maintenant) {
+    return { ok: false, erreur: 'Vous traversez la cuisine… encore un instant !' };
+  }
+  const blocage = blocageEvenement(partie, poste, maintenant);
+  if (blocage) return { ok: false, erreur: blocage };
 
   // Limite de cartes simultanées (8 en manche 1 pour vivre le multitâche, 1 ensuite)
   const maxCartes = partie.manche.maxCartesParJoueur;
@@ -227,6 +232,8 @@ export function commencerTravail(partie, joueur, carteId, maintenant, entraide =
   if (!carte || carte.proprietaire !== joueur.id || carte.etat !== ETATS_CARTE.ENCOURS) {
     return { ok: false, erreur: 'Cette carte n’est pas dans votre pile.' };
   }
+  const blocage = blocageEvenement(partie, carte.colonne, maintenant);
+  if (blocage) return { ok: false, erreur: blocage };
   if (joueur.carteActive && joueur.carteActive !== carteId) {
     // Abandon de la carte précédente : sa progression est perdue
     const ancienne = partie.cartes.get(joueur.carteActive);
@@ -234,9 +241,12 @@ export function commencerTravail(partie, joueur, carteId, maintenant, entraide =
   }
   joueur.carteActive = carteId;
   carte.travailDebut = maintenant;
+  // L'arrivage du port 🐟 rend la découpe deux fois plus rapide
+  const boost = (partie.evenement?.type === 'poissonFrais'
+    && partie.evenement.finA > maintenant && carte.colonne === 'decoupe') ? 0.5 : 1;
   const duree = Math.round(
     dureeTravail(carte.type, carte.colonne, carte.expedite)
-    * (entraide ? CONFIG.entraide.facteur : 1),
+    * (entraide ? CONFIG.entraide.facteur : 1) * boost,
   );
   carte.dureePrevue = duree; // mémorisée pour la validation anti-triche
   return {
@@ -317,6 +327,22 @@ export function terminerTravail(partie, joueur, carteId, resultat, maintenant) {
     pousserCarte(partie, carte, maintenant);
   }
   return { ok: true, consequence: 'fini' };
+}
+
+/**
+ * Un événement de cuisine bloque-t-il ce poste en ce moment ?
+ * Renvoie le message d'erreur, ou null si la voie est libre.
+ */
+function blocageEvenement(partie, poste, maintenant) {
+  const evt = partie.evenement;
+  if (!evt || evt.finA <= maintenant) return null;
+  if (evt.type === 'hygiene') {
+    return '🧑‍⚕️ Contrôle d’hygiène : on ne commence rien de nouveau !';
+  }
+  if (evt.type === 'panneRiz' && poste === 'riz') {
+    return '⚡ Le cuiseur est en panne : le poste riz est à l’arrêt.';
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------

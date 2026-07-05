@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La méthode Kanban expliquée simplement : flux tiré, limites WIP, métriques · Insuffle Académie</title>
+  <meta name="description" content="La théorie Kanban en 10 minutes : visualiser le flux, flux poussé vs flux tiré, limites WIP, goulots d'étranglement, lead time, CFD et amélioration continue. Puis vivez-la dans le Sushi Kanban Game, le serious game d'Insuffle Académie.">
+  <link rel="canonical" href="https://kanban.insuffle-academie.com/theorie">
+  <meta property="og:title" content="La méthode Kanban expliquée simplement · Insuffle Académie">
+  <meta property="og:description" content="Flux tiré, limites WIP, lead time, CFD : l'essentiel de Kanban, clair et actionnable — puis un serious game pour le vivre en équipe.">
+  <meta property="og:url" content="https://kanban.insuffle-academie.com/theorie">
+  <meta property="og:type" content="article">
+  <meta property="og:locale" content="fr_FR">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍣</text></svg>">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "La méthode Kanban expliquée simplement",
+        "inLanguage": "fr",
+        "about": ["Kanban", "flux tiré", "limites WIP", "lead time", "amélioration continue"],
+        "author": { "@id": "https://insuffle-academie.com/#organisation" },
+        "publisher": { "@id": "https://insuffle-academie.com/#organisation" },
+        "mainEntityOfPage": "https://kanban.insuffle-academie.com/theorie"
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://insuffle-academie.com/#organisation",
+        "name": "Insuffle Académie",
+        "url": "https://insuffle-academie.com"
+      }
+    ]
+  }
+  </script>
+  <style>
+    /* Mise en page propre à la page théorie (le reste vient de style.css) */
+    .theorie {
+      max-width: 780px; margin: 0 auto; padding: 40px 20px 80px;
+      line-height: 1.75;
+    }
+    .theorie-retour { font-size: .9em; margin-bottom: 26px; display: inline-block; color: var(--or); text-decoration: none; }
+    .theorie-retour:hover { color: var(--shu-vif); }
+    .theorie h1 { font-size: 2.4rem; color: var(--washi); line-height: 1.2; margin-bottom: 8px; }
+    .theorie .sous-titre { color: var(--or); letter-spacing: .2em; text-transform: uppercase; font-size: .8em; }
+    .theorie h2 {
+      font-size: 1.6rem; color: var(--washi); margin: 48px 0 14px;
+      padding-left: 14px; border-left: 4px solid var(--shu);
+    }
+    .theorie h3 { color: var(--or); margin: 26px 0 8px; }
+    .theorie p, .theorie li { color: var(--texte); }
+    .theorie ul, .theorie ol { padding-left: 24px; margin: 10px 0; }
+    .theorie li { margin: 6px 0; }
+    .theorie strong { color: var(--washi); }
+    .theorie em { color: var(--or); font-style: normal; }
+    .encart {
+      background: rgba(212, 169, 92, .07); border: 1px dashed var(--or-doux);
+      border-radius: 12px; padding: 16px 20px; margin: 18px 0;
+    }
+    .encart-jeu {
+      background: rgba(194, 53, 47, .1); border: 1px solid var(--shu);
+      border-radius: 12px; padding: 16px 20px; margin: 18px 0;
+    }
+    .encart-jeu::before { content: "🍣 Dans le jeu — "; font-weight: 700; color: var(--shu-vif); }
+    .theorie table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .92em; }
+    .theorie th, .theorie td { border: 1px solid var(--veinure); padding: 8px 12px; text-align: left; }
+    .theorie th { background: var(--bois-clair); color: var(--washi); }
+    .theorie-cta { text-align: center; margin-top: 54px; }
+    .theorie-cta .btn { text-decoration: none; display: inline-block; margin: 6px; }
+    .theorie-sommaire { background: var(--sumi); border: 1px solid var(--veinure); border-radius: 12px; padding: 18px 22px; margin: 24px 0; }
+    .theorie-sommaire a { color: var(--texte-doux); text-decoration: none; }
+    .theorie-sommaire a:hover { color: var(--or); }
+  </style>
+</head>
+<body>
+  <main class="theorie">
+    <a class="theorie-retour" href="/">← Retour au Sushi Kanban Game</a>
+
+    <p class="sous-titre">Le dojo — la théorie en 10 minutes</p>
+    <h1>La méthode Kanban, expliquée simplement</h1>
+    <p>Kanban (看板, « panneau visuel » en japonais) est une méthode de gestion du
+    flux de travail née dans les ateliers de <strong>Toyota</strong> dans les années 1950,
+    formalisée pour les équipes de la connaissance à la fin des années 2000.
+    Son pari : <strong>on n'améliore pas ce qu'on ne voit pas</strong>. Cette page vous donne
+    l'essentiel — et le <a href="/">Sushi Kanban Game</a> vous le fait vivre en 30 minutes.</p>
+
+    <nav class="theorie-sommaire" aria-label="Sommaire">
+      <b>Sommaire</b>
+      <ol>
+        <li><a href="#origines">D'où vient Kanban ?</a></li>
+        <li><a href="#piliers">Les 3 piliers</a></li>
+        <li><a href="#pratiques">Les 5 pratiques</a></li>
+        <li><a href="#flux">Flux poussé vs flux tiré</a></li>
+        <li><a href="#limites">Les limites WIP</a></li>
+        <li><a href="#goulot">Le goulot d'étranglement</a></li>
+        <li><a href="#metriques">Les métriques de flux</a></li>
+        <li><a href="#cfd">Lire un CFD</a></li>
+        <li><a href="#classes">Classes de service</a></li>
+        <li><a href="#amelioration">L'amélioration continue</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="origines">1. D'où vient Kanban ?</h2>
+    <p>Chez Toyota, Taiichi Ohno cherchait à produire <em>juste ce qu'il faut,
+    juste à temps</em> : chaque poste de l'usine signalait au poste amont, par une
+    simple carte, qu'il était prêt à recevoir du travail. Le stock fondait, les
+    problèmes devenaient visibles, l'amélioration devenait quotidienne. Deux
+    idées structurent cette pensée lean : réduire le <strong>muri</strong> (la surcharge des
+    personnes) et le <strong>mura</strong> (l'irrégularité du flux) — car c'est d'eux que naît
+    le <strong>muda</strong>, le gaspillage.</p>
+    <p>Dans les années 2000, la communauté agile a transposé ce système aux
+    travaux intellectuels : le développement logiciel d'abord, puis tout travail
+    qui traverse des étapes — support, recrutement, juridique, marketing.
+    La méthode a été formalisée par David J. Anderson autour de 2010.</p>
+
+    <h2 id="piliers">2. Les 3 piliers</h2>
+    <ol>
+      <li><strong>Commencer par ce que vous faites aujourd'hui.</strong> Kanban ne remplace
+      pas votre façon de travailler : il la rend visible. Moins de résistance,
+      moins de stress, un point de départ honnête.</li>
+      <li><strong>Respecter les rôles et le processus actuels.</strong> Pas de grand soir :
+      la méthode s'applique à l'existant, elle ne l'écrase pas.</li>
+      <li><strong>S'engager à évoluer par petits pas.</strong> Le changement incrémental,
+      guidé par les faits, bat la réorganisation brutale — presque toujours.</li>
+    </ol>
+
+    <h2 id="pratiques">3. Les 5 pratiques</h2>
+    <ul>
+      <li><strong>Visualiser le travail</strong> : un tableau, des colonnes qui représentent
+      les étapes réelles, une carte par élément de travail. La prise de
+      conscience est collective et immédiate.</li>
+      <li><strong>Limiter le travail en cours (WIP)</strong> : le cœur de la méthode — voir
+      ci-dessous.</li>
+      <li><strong>Gérer le flux</strong> : piloter avec les mesures du système (débit, temps
+      de traversée) plutôt qu'au périmètre ou à la date promise.</li>
+      <li><strong>Rendre les règles explicites</strong> : qu'est-ce qu'une carte « finie » ?
+      Qui peut tirer quoi, quand ? Une règle écrite se discute ; une règle
+      implicite se subit.</li>
+      <li><strong>S'améliorer ensemble</strong> : le système est l'affaire de l'équipe, pas
+      d'un chef de projet. Les blocages sont des informations, pas des fautes.</li>
+    </ul>
+    <div class="encart-jeu">le brief affiché au début de chaque manche est une
+    politique explicite : tout le monde lit les mêmes règles au même moment.
+    Et les questions de débrief sont l'amélioration collaborative en action.</div>
+
+    <h2 id="flux">4. Flux poussé vs flux tiré</h2>
+    <p><strong>Pousser</strong>, c'est produire puis transmettre dès qu'on a terminé — que
+    l'aval soit prêt ou non. Chacun optimise son poste, les files d'attente
+    gonflent entre les étapes, et le stock cache les problèmes.</p>
+    <p><strong>Tirer</strong>, c'est l'inverse : c'est la demande réelle de l'aval qui
+    déclenche le travail de l'amont. On ne spécifie que ce qu'on peut
+    construire, on ne construit que ce qu'on peut vérifier, on ne vérifie que
+    ce qu'on peut livrer. Produire plus que ce que l'étape suivante peut
+    absorber n'est pas de l'avance : <em>c'est du gaspillage</em>.</p>
+    <div class="encart-jeu">la manche 1 se joue en flux poussé — les commandes
+    déferlent sur les postes. La manche 3 se joue en flux tiré — plus rien
+    n'avance tant que l'aval ne le tire pas. La différence se sent dans les
+    mains, puis se lit dans les chiffres.</div>
+
+    <h2 id="limites">5. Les limites WIP</h2>
+    <p>Une <strong>limite WIP</strong> (work in progress) plafonne le nombre de cartes
+    autorisées dans une colonne. Une colonne pleine n'accepte plus rien :
+    l'amont doit s'arrêter… ou venir aider. C'est ce blocage volontaire qui
+    crée le flux tiré et qui déclenche les bonnes conversations.</p>
+    <ul>
+      <li><strong>Trop hautes</strong>, les limites ne contraignent rien : on retombe dans le
+      flux poussé et personne n'apprend rien.</li>
+      <li><strong>Trop basses</strong>, le flux avance par à-coups et se bloque sans cesse —
+      utile seulement pour des équipes déjà mûres.</li>
+      <li><strong>Point de départ pragmatique</strong> : observez votre système quelques jours
+      et posez une limite proche du nombre de personnes par étape (par exemple
+      entre <em>n + 1</em> et <em>2n − 1</em> pour n personnes), puis ajustez par l'expérience.</li>
+    </ul>
+    <p>Le bénéfice contre-intuitif : en commençant <em>moins</em> de choses, on en
+    termine <em>plus</em>. « Stop starting, start finishing. » Le multitâche coûte
+    cher : chaque changement de contexte détruit de la concentration et
+    allonge tout le monde.</p>
+    <div class="encart-jeu">en manche 2, chaque colonne pleine rougit et vibre.
+    Et si vous empilez les cartes en manche 1, changer de carte fait perdre le
+    travail en cours : le coût du context switching dans les doigts.</div>
+
+    <h2 id="goulot">6. Le goulot d'étranglement</h2>
+    <p>Dans tout flux, une étape est plus lente que les autres : le
+    <strong>goulot</strong>. C'est lui qui fixe le débit de l'ensemble — accélérer ailleurs
+    ne sert à rien, cela ne fait qu'empiler du stock devant lui. Les bons
+    réflexes :</p>
+    <ol>
+      <li>l'<strong>identifier</strong> (la file d'attente la plus grosse, le cycle time le plus long) ;</li>
+      <li>le <strong>protéger</strong> (qu'il ne manque jamais de travail prêt, jamais de travail inutile) ;</li>
+      <li>l'<strong>aider</strong> (y déplacer des bras, simplifier ce qui y passe) ;</li>
+      <li>seulement ensuite, investir pour l'élargir.</li>
+    </ol>
+    <div class="encart-jeu">l'assemblage est le goulot naturel du restaurant.
+    À deux sur un même poste, le badge 🤝 apparaît et les gestes s'accélèrent :
+    aider le goulot paie, mécaniquement.</div>
+
+    <h2 id="metriques">7. Les métriques de flux</h2>
+    <table>
+      <thead><tr><th>Métrique</th><th>Ce qu'elle mesure</th><th>Ce qu'elle vous dit</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Lead time</strong></td><td>De la demande à la livraison, vu du client</td><td>La promesse que vous pouvez tenir</td></tr>
+        <tr><td><strong>Cycle time</strong></td><td>Le temps passé dans une étape</td><td>Où le flux se traîne</td></tr>
+        <tr><td><strong>Débit (throughput)</strong></td><td>Éléments livrés par unité de temps</td><td>La seule vitesse qui compte</td></tr>
+        <tr><td><strong>WIP</strong></td><td>Ce qui est commencé et pas fini</td><td>Votre niveau de multitâche collectif</td></tr>
+        <tr><td><strong>p85 du lead time</strong></td><td>Le délai tenu 85 fois sur 100</td><td>Une promesse honnête, pas une moyenne qui ment</td></tr>
+        <tr><td><strong>Efficience du flux</strong></td><td>Temps travaillé ÷ lead time</td><td>Souvent 5 à 15 % : le reste n'est que de l'attente</td></tr>
+      </tbody>
+    </table>
+    <p>Ces mesures sont liées par une intuition simple : à débit constant,
+    <strong>plus il y a de travail en cours, plus le temps de traversée s'allonge</strong>.
+    Réduire le WIP est donc le levier le plus direct pour raccourcir le lead
+    time — sans embaucher personne.</p>
+
+    <h2 id="cfd">8. Lire un diagramme de flux cumulé (CFD)</h2>
+    <p>Le <strong>CFD</strong> empile, dans le temps, le nombre cumulé d'éléments arrivés à
+    chaque étape. Trois lectures immédiates :</p>
+    <ul>
+      <li>l'<strong>écart vertical</strong> entre deux courbes = le travail en cours entre ces étapes ;</li>
+      <li>l'<strong>écart horizontal</strong> ≈ le temps de traversée ;</li>
+      <li>une <strong>bande qui gonfle</strong> = un bouchon qui se forme — le goulot se voit avant de se vivre.</li>
+    </ul>
+    <p>Des bandes fines et parallèles signent un flux sain et prévisible.</p>
+    <div class="encart-jeu">le CFD se dessine en direct dans le coin de l'écran
+    pendant que vous jouez, et le débrief compare ceux des trois manches.</div>
+
+    <h2 id="classes">9. Les classes de service</h2>
+    <p>Tout le travail n'a pas la même urgence. Plutôt que de laisser le stress
+    décider, Kanban propose des <strong>classes de service</strong> explicites : standard,
+    date contrainte, <em>expedite</em> (urgence vraie, rare, qui coupe la file), et
+    coût d'opportunité invisible. La règle est connue de tous <em>avant</em> la
+    crise : c'est elle qui absorbe l'urgence, pas les nerfs de l'équipe.</p>
+    <div class="encart-jeu">les commandes VIP 🔥 de la manche 3 passent avant
+    tout et ignorent les limites — mais elles périssent deux fois plus vite.
+    Une politique explicite, appliquée par le serveur, pas par la panique.</div>
+
+    <h2 id="amelioration">10. L'amélioration continue</h2>
+    <p>Un système kanban n'est jamais « fini ». Le cycle est toujours le même —
+    concevoir, mettre en œuvre, étudier, améliorer — hérité de la roue de
+    Deming (PDCA) : formuler une hypothèse, l'essayer, mesurer, ajuster.
+    La <strong>réunion quotidienne devant le tableau</strong> en est le battement de cœur :
+    le tableau est-il à jour ? les règles sont-elles suivies ? qu'est-ce qui est
+    bloqué, et qu'est-ce qu'on fait <em>aujourd'hui</em> pour le débloquer ?</p>
+    <p>Et régulièrement, on prend du recul : c'est exactement ce que fait le
+    débrief entre les manches du jeu — mesurer, comparer, décider d'un
+    changement, rejouer.</p>
+
+    <div class="encart">
+      <b>À retenir en une phrase :</b> rendez le travail visible, limitez ce qui
+      est commencé, laissez l'aval tirer, regardez les mesures, améliorez par
+      petits pas — ensemble.
+    </div>
+
+    <div class="theorie-cta">
+      <a class="btn btn-principal" href="/">🍣 Vivre tout ça dans le Sushi Kanban Game</a>
+      <a class="btn" href="https://www.insuffle-academie.com/formations/formation-kanban-fluidifier-le-flux/"
+         target="_blank" rel="noopener">🎓 Aller plus loin : la formation « Kanban, fluidifier le flux »</a>
+    </div>
+
+    <footer class="signature-insuffle">
+      <a href="https://insuffle-academie.com" target="_blank" rel="noopener">
+        <span class="insuffle-souffle">〜</span> Un contenu <b>Insuffle Académie</b></a>
+      <small>Formation Facilitation &amp; Intelligence Collective — on ne vous explique pas, on pratique avec vous</small>
+    </footer>
+  </main>
+</body>
+</html>

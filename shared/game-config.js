@@ -22,8 +22,8 @@ export const CONFIG = {
 
   // ---------- Salle ----------
   salle: {
-    maxJoueurs: 8,                 // joueurs maximum par salle (facilitateur inclus)
-    minJoueurs: 2,                 // minimum pour lancer une manche
+    maxJoueurs: 8,                 // joueurs HUMAINS maximum par salle (facilitateur inclus)
+    minJoueurs: 1,                 // on peut jouer seul·e (avec des commis 🤖 en renfort)
     ttlSalleVide: 30 * 60 * 1000,  // une salle sans joueur connecté depuis 30 min est détruite
     longueurCode: 4,               // longueur du code de salle
     // Alphabet du code : sans I, O ni Q pour éviter les confusions à l'oral
@@ -161,6 +161,38 @@ export const CONFIG = {
     prolongationManche: 60_000, // durée ajoutée par le bouton « +1 min » du facilitateur
   },
 
+  // ---------- Rôles prédéfinis et déplacements ----------
+  // Au lancement d'une manche, chacun reçoit un poste selon la taille de
+  // l'équipe : on démarre organisé, pas en essaim. Et on ne peut pas être
+  // partout : changer de poste = traverser la cuisine (délai de déplacement).
+  roles: {
+    // Répartition par nombre de joueurs humains (l'ordre d'arrivée fait foi).
+    // Les postes non couverts sont la leçon : il faudra bouger… ou recruter.
+    repartition: {
+      1: ['assemblage'],
+      2: ['riz', 'assemblage'],
+      3: ['riz', 'assemblage', 'service'],
+      4: ['riz', 'decoupe', 'assemblage', 'service'],
+      5: ['riz', 'decoupe', 'assemblage', 'qualite', 'service'],
+      6: ['riz', 'decoupe', 'assemblage', 'qualite', 'service', 'assemblage'],
+      7: ['riz', 'decoupe', 'assemblage', 'qualite', 'service', 'assemblage', 'riz'],
+      8: ['riz', 'decoupe', 'assemblage', 'qualite', 'service', 'assemblage', 'riz', 'service'],
+    },
+    dureeDeplacement: 3000, // traverser la cuisine prend 3 s : bouger se réfléchit
+  },
+
+  // ---------- Commis virtuels (mode solo / renfort) ----------
+  // Des équipiers IA côté serveur : ils respectent TOUTES les règles du flux
+  // (tirage, limites WIP, priorité VIP) — ils sont juste un peu moins bons
+  // qu'un humain. Parfaits pour jouer seul·e ou préparer un atelier.
+  commis: {
+    max: 5,                    // un par poste au maximum
+    facteurLenteur: 1.25,      // 25 % plus lents qu'un humain sur chaque geste
+    tauxDetectionDefaut: 0.7,  // au contrôle qualité, ils ratent 30 % des défauts
+    delaiReaffectation: 4000,  // sans travail à leur poste pendant 4 s → ils vont aider ailleurs
+    avatar: '🤖',
+  },
+
   // ---------- Anti-triche ----------
   antiTriche: {
     // Le serveur refuse un « travail terminé » envoyé avant ce ratio de la durée
@@ -230,6 +262,41 @@ export const CONFIG = {
     ['CFD', 'Diagramme de flux cumulé : chaque bande = une étape ; une bande qui gonfle = un bouchon.'],
     ['Classe de service', 'Règle explicite de priorité (ex. VIP) : l’urgence traitée par une politique, pas par la panique.'],
   ],
+
+  // ---------- Événements aléatoires de cuisine ----------
+  // La variabilité, c'est la vraie vie : l'inspecteur débarque, le cuiseur
+  // lâche, un car de touristes se gare devant. À partir de la manche 2
+  // (la manche 1 reste une base de comparaison propre). Le facilitateur
+  // peut aussi en déclencher un à la demande (🎲).
+  evenements: {
+    actifs: true,
+    aPartirDeManche: 2,       // manche 1 = mesure témoin, sans surprise
+    premierApres: 45_000,     // premier événement ~45 s après le début
+    intervalleMin: 50_000,    // puis un événement toutes les 50 à 90 s
+    intervalleMax: 90_000,
+    liste: {
+      hygiene: {
+        nom: 'Contrôle d’hygiène', emoji: '🧑‍⚕️', duree: 10_000, poids: 3,
+        description: 'L’inspecteur est en cuisine : personne ne commence de nouveau geste… mais les sushis, eux, continuent de vieillir.',
+      },
+      panneRiz: {
+        nom: 'Panne du cuiseur à riz', emoji: '⚡', duree: 12_000, poids: 3,
+        description: 'Le cuiseur disjoncte : le poste Préparation riz est à l’arrêt. Le goulot se déplace…',
+      },
+      rush: {
+        nom: 'Rush de touristes', emoji: '🌊', duree: 0, poids: 3,
+        description: 'Un car entier débarque : trois commandes d’un coup !',
+      },
+      poissonFrais: {
+        nom: 'Arrivage du port', emoji: '🐟', duree: 15_000, poids: 2,
+        description: 'Poisson du matin, ultra-frais : la découpe est deux fois plus rapide. Profitez-en !',
+      },
+      critique: {
+        nom: 'Critique culinaire', emoji: '⭐', duree: 0, poids: 1,
+        description: 'Un critique gastronomique s’installe : sa commande passe avant tout le reste.',
+      },
+    },
+  },
 
   // ---------- Questions de débrief affichées entre les manches ----------
   // La pédagogie se joue ICI : le facilitateur s'appuie sur ces questions.

@@ -73,6 +73,25 @@ export function creerJoueur(pseudo, avatar, estFacilitateur = false) {
 }
 
 /**
+ * Crée un commis 🤖 : un équipier virtuel piloté par le serveur.
+ * C'est un joueur comme un autre (mêmes règles de flux), sans socket.
+ */
+export function creerBot(numero, poste) {
+  return {
+    id: `bot-${randomUUID().slice(0, 6)}`,
+    jeton: null,                 // pas de navigateur, pas de reconnexion
+    pseudo: `Commis ${numero}`,
+    avatar: CONFIG.commis.avatar,
+    poste,
+    carteActive: null,
+    connecte: true,
+    estFacilitateur: false,
+    estBot: true,
+    inactifDepuis: 0,            // pour la réaffectation automatique vers le goulot
+  };
+}
+
+/**
  * Fait rejoindre (ou re-rejoindre) une salle.
  * Si `jeton` correspond à un joueur existant → reconnexion : il retrouve
  * son pseudo, son poste et sa carte en cours.
@@ -92,7 +111,8 @@ export function rejoindreSalle(code, pseudo, avatar, jeton) {
     }
   }
 
-  const connectes = [...salle.joueurs.values()].filter((j) => j.connecte).length;
+  // Seuls les humains comptent dans la jauge de la salle (pas les commis 🤖)
+  const connectes = [...salle.joueurs.values()].filter((j) => j.connecte && !j.estBot).length;
   if (connectes >= CONFIG.salle.maxJoueurs) return { erreur: 'La salle est pleine.' };
 
   const joueur = creerJoueur(pseudo, avatar, false);
@@ -116,7 +136,8 @@ export function deconnecterJoueur(salle, joueurId) {
   joueur.connecte = false;
   salle.derniereActivite = Date.now();
   if (salle.facilitateurId === joueurId) {
-    const remplacant = [...salle.joueurs.values()].find((j) => j.connecte);
+    // Le rôle passe à un humain connecté — jamais à un commis 🤖
+    const remplacant = [...salle.joueurs.values()].find((j) => j.connecte && !j.estBot);
     if (remplacant) {
       salle.facilitateurId = remplacant.id;
       remplacant.estFacilitateur = true;
@@ -133,7 +154,8 @@ export function deconnecterJoueur(salle, joueurId) {
 export function nettoyerSalles(maintenant = Date.now()) {
   const detruites = [];
   for (const [code, salle] of salles) {
-    const personne = ![...salle.joueurs.values()].some((j) => j.connecte);
+    // Les commis 🤖 ne maintiennent pas une salle en vie : humains uniquement
+    const personne = ![...salle.joueurs.values()].some((j) => j.connecte && !j.estBot);
     if (personne && maintenant - salle.derniereActivite > CONFIG.salle.ttlSalleVide) {
       salles.delete(code);
       detruites.push(code);

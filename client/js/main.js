@@ -54,6 +54,9 @@ function init() {
 
   $('btn-sons').textContent = sons.icone();
 
+  // Le splash a fini son animation : on libère le DOM
+  setTimeout(() => $('splash')?.remove(), 1800);
+
   // On ne quitte pas la cuisine par accident en pleine manche
   window.addEventListener('beforeunload', (e) => {
     if (net.etat?.statut === STATUTS.MANCHE && net.moi()?.poste) e.preventDefault();
@@ -150,6 +153,7 @@ function rendre(etat) {
       mancheBriefee = 0; // si on rejoue la même manche, son brief se remontre
       numeroMancheAffiche = 0;
       document.title = 'Débrief · Sushi Kanban — Insuffle Académie';
+      pluieDeSakura();
       rendreDebrief({
         titre: $('debrief-titre'), manches: $('debrief-manches'),
         questions: $('debrief-questions'), actions: $('debrief-actions'),
@@ -171,12 +175,16 @@ function rendreLobby(etat) {
   $('lobby-compteur').textContent = `Autour du comptoir : ${connectes}/${CONFIG.salle.maxJoueurs}`;
 
   $('lobby-joueurs').innerHTML = etat.joueurs.map((j) => `
-    <div class="lobby-joueur ${j.connecte ? '' : 'deconnecte'}">
+    <div class="lobby-joueur ${j.connecte ? '' : 'deconnecte'} ${j.estBot ? 'est-commis' : ''}">
       <span class="lobby-avatar">${j.avatar}</span>
       <span>${j.pseudo}</span>
       ${j.estFacilitateur ? '<span class="badge-facil">facilitateur</span>' : ''}
+      ${j.estBot ? '<span class="badge-commis">commis</span>' : ''}
       <small>${j.poste ? COLONNE_PAR_ID[j.poste].nom : 'sans poste'}</small>
     </div>`).join('');
+
+  const commis = etat.joueurs.filter((j) => j.estBot).length;
+  $('compteur-commis').textContent = `🤖 ×${commis}`;
 
   rendreBarrePostes($('lobby-choix-postes'), etat, moi);
   $('lobby-facilitateur').hidden = !net.estFacilitateur();
@@ -243,10 +251,22 @@ function brancherJeu() {
   $('facil-expedite').addEventListener('click', () => net.action(EVT.FACIL_EXPEDITE).then(retourAction));
   $('facil-pause').addEventListener('click', () => net.action(EVT.FACIL_PAUSE).then(retourAction));
   $('facil-prolonger').addEventListener('click', () => net.action(EVT.FACIL_PROLONGER).then(retourAction));
+  $('facil-evenement').addEventListener('click', () => net.action(EVT.FACIL_EVENEMENT).then(retourAction));
   $('facil-vider').addEventListener('click', async () => {
     const r = await net.action(EVT.FACIL_VIDER);
     if (r.ok) toast(`🧹 ${r.retirees} commande(s) retirée(s) de la file.`);
   });
+  // Commis virtuels : les mêmes boutons au lobby et en jeu
+  const gererCommis = (action) => async () => {
+    const r = await net.action(EVT.FACIL_COMMIS, { action });
+    if (!r.ok) { toast(r.erreur); return; }
+    toast(action === 'retirer' ? `👋 ${r.pseudo} quitte la cuisine.` : `🤖 ${r.pseudo} rejoint la cuisine (${COLONNE_PAR_ID[r.poste]?.nom}).`);
+  };
+  $('btn-commis-plus').addEventListener('click', gererCommis('ajouter'));
+  $('btn-commis-moins').addEventListener('click', gererCommis('retirer'));
+  $('facil-commis-plus').addEventListener('click', gererCommis('ajouter'));
+  $('facil-commis-moins').addEventListener('click', gererCommis('retirer'));
+
   $('facil-transfert').addEventListener('change', (e) => {
     if (!e.target.value) return;
     net.action(EVT.FACIL_TRANSFERT, { joueurId: e.target.value }).then(retourAction);
@@ -299,6 +319,19 @@ function rendreJeu(etat) {
 
   rendreBarrePostes($('barre-postes-jeu'), etat, moi);
   $('btn-aide').hidden = !moi?.poste;
+
+  // Bandeau d'événement de cuisine en cours
+  const bandeau = $('bandeau-evenement');
+  if (etat.evenement) {
+    const def = CONFIG.evenements.liste[etat.evenement.type];
+    bandeau.hidden = false;
+    bandeau.dataset.fina = etat.evenement.finA;
+    $('evenement-texte').textContent = `${def.emoji} ${def.nom} — ${def.description}`;
+  } else {
+    bandeau.hidden = true;
+    delete bandeau.dataset.fina;
+  }
+
   rendreTableau($('tableau'), etat, net.joueurId, surCarte);
   dessinerCFD($('canvas-cfd'), etat.statsLive?.cfd, CONFIG.manches[etat.manche.numero - 1].duree);
 
@@ -323,9 +356,11 @@ function rendrePanneauFacilitateur(etat) {
   $('facil-danger').hidden = enDanger === 0;
   if (enDanger > 0) $('facil-danger').textContent = `🚨 ${enDanger} sushi(s) en danger de péremption`;
 
-  // Liste de transfert du rôle (les autres joueurs connectés)
+  $('facil-compteur-commis').textContent = `🤖 ×${etat.joueurs.filter((j) => j.estBot).length}`;
+
+  // Liste de transfert du rôle (les autres humains connectés)
   const options = etat.joueurs
-    .filter((j) => j.connecte && j.id !== net.joueurId)
+    .filter((j) => j.connecte && !j.estBot && j.id !== net.joueurId)
     .map((j) => `<option value="${j.id}">${j.avatar} ${j.pseudo}</option>`).join('');
   const select = $('facil-transfert');
   if (select.dataset.options !== options) { // ne pas casser un menu ouvert
@@ -374,7 +409,10 @@ function afficherBriefManche(manche) {
         .map((p) => `${COLONNE_PAR_ID[p].nom} <b>${manche.limitesWip[p] ?? '∞'}</b>`)
         .join(' · ')}</p>`
     : '';
+  // Le kanji de la manche, à l'encre diluée : 混 chaos, 限 limite, 流 flux
+  const kanji = { 1: '混沌', 2: '限界', 3: '流れ' }[manche.numero] || '';
   boite.innerHTML = `
+    <span class="brief-kanji" aria-hidden="true">${kanji}</span>
     <span class="brief-numero">Manche ${manche.numero}</span>
     <h2>${manche.titre}</h2>
     <p class="brief-accroche">${brief.accroche}</p>
@@ -490,6 +528,12 @@ function boucleAffichage() {
       // Fraîcheur et âges, entre deux états serveur
       rafraichirCartes($('tableau'), net.maintenant());
       majFraicheurMiniJeu();
+      // Compte à rebours du bandeau d'événement
+      const bandeau = $('bandeau-evenement');
+      if (!bandeau.hidden && bandeau.dataset.fina) {
+        const reste = Math.max(0, Math.ceil((Number(bandeau.dataset.fina) - net.maintenant()) / 1000));
+        $('evenement-chrono').textContent = reste > 0 ? `${reste}s` : '';
+      }
     }
   }
   requestAnimationFrame(boucleAffichage);
@@ -552,6 +596,14 @@ function surEvenement(evt) {
     case 'maintenance':
       toast('🛠 Le serveur redémarre — reconnexion automatique dans un instant…');
       break;
+    case 'evenementCuisine': {
+      const def = CONFIG.evenements.liste[evt.evenement?.type];
+      if (def) { sons.evenement(); toast(`${def.emoji} ${def.nom} !`); }
+      break;
+    }
+    case 'finEvenementCuisine':
+      toast('✅ La cuisine reprend son rythme normal.');
+      break;
     case 'finManche': sons.finManche(); break;
     default: break;
   }
@@ -563,6 +615,25 @@ function clignoterColonne(poste) {
   if (!col) return;
   col.classList.add('appel');
   setTimeout(() => col.classList.remove('appel'), 3200);
+}
+
+/** Pluie de pétales de sakura à l'arrivée sur le débrief : on souffle. */
+let sakuraEnCours = false;
+function pluieDeSakura() {
+  if (sakuraEnCours) return;
+  sakuraEnCours = true;
+  for (let i = 0; i < 14; i += 1) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'petale';
+      p.style.left = `${Math.random() * 100}vw`;
+      p.style.setProperty('--derive', `${(Math.random() - 0.5) * 200}px`);
+      p.style.animationDuration = `${5 + Math.random() * 5}s`;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 11_000);
+    }, i * 350);
+  }
+  setTimeout(() => { sakuraEnCours = false; }, 14_000);
 }
 
 /**

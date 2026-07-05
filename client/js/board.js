@@ -17,6 +17,12 @@ const ICONES_COLONNES = {
   qualite: '🔍', service: '🏮', livre: '🎌',
 };
 
+/** Kanji en filigrane au fond de chaque colonne (pure décoration). */
+const KANJI_COLONNES = {
+  commandes: '注', riz: '米', decoupe: '切', assemblage: '組',
+  qualite: '検', service: '運', livre: '済',
+};
+
 // Mémoire des états précédents : sert au flash vert « vient de finir »
 const etatsPrecedents = new Map();
 
@@ -51,6 +57,7 @@ export function rendreTableau(element, etat, joueurId, surCarte) {
     const colEl = document.createElement('section');
     colEl.className = 'colonne';
     colEl.dataset.colonne = colonne.id;
+    colEl.dataset.kanji = KANJI_COLONNES[colonne.id] || '';
     if (pleine) colEl.classList.add('pleine');
     if (estFacilitateur && etat.goulot === colonne.id) colEl.classList.add('goulot');
 

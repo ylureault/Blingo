@@ -21,7 +21,26 @@ Entre chaque manche, un **écran de débrief** compare throughput, lead time
 poste et CFD, avec les questions d'animation et un encart « ce qu'il fallait
 voir » — c'est là que la pédagogie se fait (voir [FACILITATION.md](FACILITATION.md)).
 
+La théorie est aussi en ligne : **[/theorie](client/theorie.html)** — la
+méthode Kanban expliquée simplement (contenu original, optimisé pour le
+référencement), reliée à la [formation « Kanban : fluidifier le flux »
+d'Insuffle Académie](https://www.insuffle-academie.com/formations/formation-kanban-fluidifier-le-flux/).
+
 En plus du tableau :
+
+- **Mode solo et commis virtuels 🤖** : jouable seul·e — des équipiers IA
+  qui respectent toutes les règles du flux, plus lents qu'un humain,
+  faillibles au contrôle qualité, et qui vont spontanément aider le goulot.
+- **Rôles prédéfinis** : au lancement d'une manche, chacun reçoit un poste
+  selon la taille de l'équipe ; changer de poste coûte 3 s de déplacement —
+  on ne peut pas être partout.
+- **Événements aléatoires 🎲** dès la manche 2 : contrôle d'hygiène, panne
+  du cuiseur, rush de touristes, arrivage du port, critique culinaire — la
+  variabilité (mura) incarnée.
+- **Direction artistique izakaya** : typographies calligraphiques
+  auto-hébergées (OFL), cartes-tickets en papier washi, kanji en filigrane,
+  splash screen ensō, brief de manche en carton-titre, pétales de sakura au
+  débrief, motif seigaiha, grain d'écran.
 
 - **Deux canaux de commande**, comme dans un vrai resto japonais : la salle 🏮
   (numéro de table) et la livraison 🛵 « Yatta Eats », dont la fraîcheur fond

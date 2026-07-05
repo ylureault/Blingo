@@ -34,6 +34,11 @@ const io = new Server(serveurHttp, {
 app.use('/shared', express.static(path.join(racine, 'shared')));
 app.use(express.static(path.join(racine, 'client')));
 
+// La théorie Kanban (page statique, riche pour le référencement)
+app.get('/theorie', (_req, res) => {
+  res.sendFile(path.join(racine, 'client', 'theorie.html'));
+});
+
 // Lien direct d'invitation : /ABCD renvoie la SPA, qui lit le code dans l'URL
 app.get('/:code([A-Za-z]{4})', (_req, res) => {
   res.sendFile(path.join(racine, 'client', 'index.html'));

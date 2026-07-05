@@ -11,18 +11,58 @@
   <meta property="og:url" content="https://kanban.insuffle-academie.com">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_FR">
+  <link rel="canonical" href="https://kanban.insuffle-academie.com/">
+  <!-- Données structurées : le jeu et l'organisme de formation qui l'édite -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Sushi Kanban Game",
+        "url": "https://kanban.insuffle-academie.com",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "fr",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "description": "Serious game multijoueur pour apprendre Kanban en équipe : flux tiré, limites WIP, goulots, lead time et CFD, en 3 manches de 5 minutes.",
+        "publisher": { "@id": "https://insuffle-academie.com/#organisation" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://insuffle-academie.com/#organisation",
+        "name": "Insuffle Académie",
+        "url": "https://insuffle-academie.com",
+        "slogan": "On ne vous explique pas la facilitation, on la pratique avec vous"
+      },
+      {
+        "@type": "Course",
+        "name": "Formation Kanban : fluidifier le flux",
+        "url": "https://www.insuffle-academie.com/formations/formation-kanban-fluidifier-le-flux/",
+        "provider": { "@id": "https://insuffle-academie.com/#organisation" },
+        "description": "Formation Kanban pratique par Insuffle Académie : visualiser le flux, limiter le travail en cours, piloter par les métriques et installer l'amélioration continue."
+      }
+    ]
+  }
+  </script>
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍣</text></svg>">
 </head>
 <body>
 
+  <!-- Splash : l'enso tracé à l'encre, puis le rideau se lève -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <svg class="splash-enso" viewBox="0 0 150 150"><circle cx="75" cy="75" r="66"/></svg>
+    <span class="splash-titre">Sushi Kanban</span>
+  </div>
+
   <!-- ══════════ ÉCRAN ACCUEIL ══════════ -->
   <section id="ecran-accueil" class="ecran">
-    <div class="lanterne lanterne-g">提灯</div>
+    <div class="lanterne lanterne-g">看板</div>
     <div class="lanterne lanterne-d">寿司</div>
     <div class="accueil-boite">
       <h1 class="titre-jeu"><span class="titre-icone">🍣</span> Sushi Kanban <span class="titre-sous">le jeu du flux</span></h1>
-      <p class="accueil-pitch">3 manches, 5 minutes chacune, pour vivre le Kanban dans un restaurant de sushis débordé. Sans inscription.</p>
+      <p class="accueil-pitch">3 manches, 5 minutes chacune, pour vivre le Kanban dans un restaurant de sushis débordé. Sans inscription — et jouable en solo avec des commis 🤖.</p>
 
       <div class="accueil-identite">
         <input id="champ-pseudo" type="text" maxlength="20" placeholder="Votre pseudo" autocomplete="off">
@@ -37,6 +77,9 @@
         </div>
       </div>
       <p id="accueil-erreur" class="message-erreur" hidden></p>
+
+      <p class="lien-theorie">📖 <a href="/theorie">La théorie Kanban en 10 minutes</a> —
+        avant ou après la partie.</p>
 
       <footer class="signature-insuffle">
         <a href="https://insuffle-academie.com" target="_blank" rel="noopener">
@@ -62,8 +105,14 @@
         <div id="lobby-choix-postes" class="barre-postes"></div>
       </div>
       <div id="lobby-facilitateur" class="panneau-lancement" hidden>
+        <div class="lobby-commis">
+          <span>Seul·e ou en petit comité ? Recrutez des commis :</span>
+          <button id="btn-commis-moins" class="btn btn-icone" title="Retirer un commis" aria-label="Retirer un commis">−</button>
+          <span id="compteur-commis" class="compteur-commis">🤖 ×0</span>
+          <button id="btn-commis-plus" class="btn btn-icone" title="Ajouter un commis" aria-label="Ajouter un commis">+</button>
+        </div>
         <button id="btn-lancer-m1" class="btn btn-principal">Lancer la manche 1 — Le chaos</button>
-        <p class="lobby-aide">Minimum 2 joueurs. Consultez <code>FACILITATION.md</code> pour le déroulé d’animation.</p>
+        <p class="lobby-aide">Jouable en solo avec des commis 🤖. Consultez <code>FACILITATION.md</code> pour le déroulé d’animation.</p>
       </div>
       <p id="lobby-attente" class="lobby-aide">En attente du lancement par le facilitateur…</p>
     </div>
@@ -92,6 +141,12 @@
       </div>
     </header>
 
+    <!-- Bandeau d'événement de cuisine (contrôle d'hygiène, panne…) -->
+    <div id="bandeau-evenement" class="bandeau-evenement" hidden>
+      <span id="evenement-texte"></span>
+      <b id="evenement-chrono"></b>
+    </div>
+
     <div class="zone-postes">
       <div id="barre-postes-jeu" class="barre-postes barre-postes-jeu"></div>
       <button id="btn-aide" class="btn btn-aide" hidden
@@ -117,6 +172,13 @@
       <div class="facil-ligne">
         <button id="facil-expedite" class="btn btn-vip" hidden>🔥 Commande VIP</button>
         <button id="facil-vider" class="btn btn-discret" title="Vider la file des Commandes (soupape de secours)">🧹 Vider les commandes</button>
+        <button id="facil-evenement" class="btn" title="Déclencher un événement de cuisine au hasard">🎲 Événement</button>
+      </div>
+      <div class="facil-ligne">
+        <button id="facil-commis-moins" class="btn btn-icone" title="Retirer un commis" aria-label="Retirer un commis">−</button>
+        <span id="facil-compteur-commis" class="compteur-commis">🤖 ×0</span>
+        <button id="facil-commis-plus" class="btn btn-icone" title="Ajouter un commis" aria-label="Ajouter un commis">+</button>
+        <small>commis virtuels</small>
       </div>
       <p id="facil-danger" class="facil-goulot" hidden></p>
       <label class="facil-ligne facil-transfert">Confier le rôle à

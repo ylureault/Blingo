@@ -22,13 +22,26 @@ explications arrivent APRÈS le vécu, jamais avant.
    vous êtes automatiquement facilitateur — vous pouvez aussi jouer.
 2. Partagez le lien direct (`https://…/ABCD`) ou le code à 4 lettres.
    Chaque participant choisit un pseudo et un avatar : c'est tout.
-3. 2 à 8 joueurs. Idéal : 4 à 6. À 2 ou 3 joueurs, réduisez le débit des
-   commandes (curseur ⚙️ à ×0,7) pour que la manche 1 reste jouable.
-4. Chacun choisit un poste. Bonnes pratiques :
-   - 4 joueurs : riz, découpe, assemblage, qualité+service (un joueur mobile)
-   - 6+ joueurs : un par poste, les restants « volants »
-   - Dites simplement : « installez-vous à un poste » — sans préciser qu'on
-     peut en changer. La découverte de la mobilité EST un moment pédagogique.
+3. 1 à 8 joueurs. Idéal : 4 à 6. À 1, 2 ou 3 joueurs, ajoutez des
+   **commis virtuels 🤖** (boutons du lobby) : des équipiers IA qui suivent
+   les mêmes règles de flux, travaillent 25 % moins vite qu'un humain,
+   ratent parfois un défaut au contrôle qualité… et vont d'eux-mêmes aider
+   le poste qui déborde. Parfaits aussi pour DÉCOUVRIR le jeu en solo avant
+   votre atelier.
+4. **Les rôles sont prédéfinis** : au lancement de chaque manche, le serveur
+   affecte un poste à chacun selon la taille de l'équipe (à 3 : riz,
+   assemblage, service — les postes vides sont la première leçon). On peut
+   changer de poste à tout moment, mais **traverser la cuisine prend 3
+   secondes** : on ne peut pas être partout, bouger se décide.
+   Ne dites pas qu'on peut changer de poste : la découverte de la mobilité
+   EST un moment pédagogique.
+5. **Événements aléatoires 🎲** : à partir de la manche 2, la cuisine vit —
+   contrôle d'hygiène (plus aucun nouveau geste pendant 10 s, mais la
+   fraîcheur file), panne du cuiseur (le poste riz s'arrête : le goulot se
+   déplace), rush de touristes (+3 commandes d'un coup), arrivage du port
+   (découpe 2× plus rapide), critique culinaire (une VIP surgit). C'est la
+   VARIABILITÉ (mura) incarnée — un excellent matériau de débrief. Vous
+   pouvez aussi en déclencher un à la demande (bouton 🎲 du panneau ⚙️).
 
 **Outils intégrés à connaître avant de démarrer :**
 - Au lancement de chaque manche, un **brief plein écran** annonce les règles

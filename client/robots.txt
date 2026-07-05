@@ -1,0 +1,6 @@
+# Sushi Kanban Game — kanban.insuffle-academie.com
+User-agent: *
+Allow: /
+Disallow: /socket.io/
+
+Sitemap: https://kanban.insuffle-academie.com/sitemap.xml

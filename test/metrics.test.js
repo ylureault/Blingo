@@ -15,8 +15,9 @@ import { creerPartie, creerCarte } from '../server/flow.js';
 import {
   demarrerManche, arreterManche, tick, reglerWip, reglerDebit,
   pauserManche, reprendreManche, prolongerManche, viderCommandes, transfererRole,
+  ajouterCommis, retirerCommis, declencherEvenement,
 } from '../server/game.js';
-import { nettoyerPseudo, creerSalle, rejoindreSalle } from '../server/rooms.js';
+import { nettoyerPseudo, creerSalle, rejoindreSalle, nettoyerSalles, salles } from '../server/rooms.js';
 
 // ---------------------------------------------------------------------------
 // Lead time
@@ -253,6 +254,143 @@ test('le transfert de rôle change le facilitateur', () => {
   const r = transfererRole(salle, joueur.id);
   assert.equal(r.ok, true);
   assert.equal(salle.facilitateurId, joueur.id);
+});
+
+// ---------------------------------------------------------------------------
+// Rôles prédéfinis et déplacement
+// ---------------------------------------------------------------------------
+
+test('au lancement, chacun reçoit un poste selon la taille de l’équipe', () => {
+  const salle = salleDeTest();
+  for (const [id, pseudo] of [['a', 'Ana'], ['b', 'Bob'], ['c', 'Chloé']]) {
+    salle.joueurs.set(id, { id, pseudo, poste: null, carteActive: null, connecte: true });
+  }
+  demarrerManche(salle, 1, 0);
+  const postes = [...salle.joueurs.values()].map((j) => j.poste);
+  assert.deepEqual(postes, CONFIG.roles.repartition[3]);
+});
+
+test('en déplacement entre deux postes, on ne peut pas prendre de carte', async () => {
+  const { prendreCarte: prendre } = await import('../server/flow.js');
+  const salle = salleDeTest();
+  demarrerManche(salle, 1, 0);
+  const carte = creerCarte(salle.partie, 'maki', false, 0);
+  carte.colonne = 'riz'; carte.etat = 'attente';
+  const joueur = { id: 'j1', poste: 'riz', carteActive: null, enDeplacementJusqua: 5000 };
+  assert.match(prendre(salle.partie, joueur, carte.id, 3000).erreur, /traversez/);
+  assert.equal(prendre(salle.partie, joueur, carte.id, 5001).ok, true);
+});
+
+// ---------------------------------------------------------------------------
+// Événements aléatoires de cuisine
+// ---------------------------------------------------------------------------
+
+test('le contrôle d’hygiène bloque tout nouveau geste, la panne ne bloque que le riz', async () => {
+  const { prendreCarte: prendre } = await import('../server/flow.js');
+  const salle = salleDeTest();
+  demarrerManche(salle, 2, 0);
+  const enRiz = creerCarte(salle.partie, 'maki', false, 0);
+  enRiz.colonne = 'riz'; enRiz.etat = 'attente';
+  const enDecoupe = creerCarte(salle.partie, 'maki', false, 0);
+  enDecoupe.colonne = 'decoupe'; enDecoupe.etat = 'attente';
+  const cuisinier = { id: 'j1', poste: 'riz', carteActive: null };
+  const poissonnier = { id: 'j2', poste: 'decoupe', carteActive: null };
+
+  declencherEvenement(salle, 1000, 'hygiene');
+  assert.match(prendre(salle.partie, cuisinier, enRiz.id, 2000).erreur, /hygiène/);
+  assert.match(prendre(salle.partie, poissonnier, enDecoupe.id, 2000).erreur, /hygiène/);
+
+  salle.partie.evenement = null;
+  declencherEvenement(salle, 20_000, 'panneRiz');
+  assert.match(prendre(salle.partie, cuisinier, enRiz.id, 21_000).erreur, /panne/);
+  assert.equal(prendre(salle.partie, poissonnier, enDecoupe.id, 21_000).ok, true);
+});
+
+test('le rush fait débarquer trois commandes d’un coup', () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 2, 0);
+  const avant = salle.partie.cartes.size;
+  declencherEvenement(salle, 1000, 'rush');
+  assert.equal(salle.partie.cartes.size, avant + 3);
+});
+
+test('la critique culinaire injecte une commande VIP', () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 2, 0);
+  declencherEvenement(salle, 1000, 'critique');
+  assert.ok([...salle.partie.cartes.values()].some((c) => c.expedite));
+});
+
+test('un événement expiré se nettoie au tick suivant', () => {
+  const salle = salleDeTest();
+  demarrerManche(salle, 2, 0);
+  declencherEvenement(salle, 1000, 'hygiene');
+  salle.prochainEvenement = Infinity; // pas de nouveau tirage pendant le test
+  const evts = tick(salle, 1000 + CONFIG.evenements.liste.hygiene.duree + 500);
+  assert.equal(salle.partie.evenement, null);
+  assert.ok(evts.some((e) => e.type === 'finEvenementCuisine'));
+});
+
+// ---------------------------------------------------------------------------
+// Commis virtuels 🤖 (mode solo)
+// ---------------------------------------------------------------------------
+
+test('les commis s’ajoutent sur les postes les moins couverts, avec un plafond', () => {
+  const salle = salleDeTest();
+  const postes = new Set();
+  for (let i = 0; i < CONFIG.commis.max; i += 1) {
+    const r = ajouterCommis(salle);
+    assert.equal(r.ok, true);
+    postes.add(r.poste);
+  }
+  assert.equal(postes.size, CONFIG.commis.max); // un poste différent chacun
+  assert.equal(ajouterCommis(salle).ok, false); // plafond atteint
+  assert.equal(retirerCommis(salle).ok, true);
+});
+
+test('un commis prend une carte, la travaille (plus lentement) et la termine', () => {
+  const salle = salleDeTest();
+  ajouterCommis(salle); // ira sur riz (premier poste vide)
+  const commis = [...salle.joueurs.values()].find((j) => j.estBot);
+  commis.poste = 'riz';
+  demarrerManche(salle, 1, 0);
+  const carte = creerCarte(salle.partie, 'maki', false, 0);
+
+  tick(salle, 1000); // pousse la carte dans riz, le commis la prend
+  assert.equal(carte.proprietaire, commis.id);
+
+  // Durée humaine 3000 ms × 1.25 de lenteur = 3750 ms : pas fini avant
+  tick(salle, 4000);
+  assert.equal(carte.proprietaire, commis.id);
+  tick(salle, 4800); // 1000 + 3750 < 4800 → geste terminé
+  assert.notEqual(carte.colonne, 'riz'); // poussée vers la découpe (mode push)
+});
+
+test('un commis inactif se réaffecte au poste qui déborde', () => {
+  const salle = salleDeTest();
+  ajouterCommis(salle);
+  const commis = [...salle.joueurs.values()].find((j) => j.estBot);
+  commis.poste = 'service'; // aucun travail ne l'attend là-bas
+  commis.inactifDepuis = 0;
+  demarrerManche(salle, 1, 0);
+  salle.prochaineCommande = Infinity; // pas de nouveau spawn pendant le test
+  // Trois cartes s'entassent à l'assemblage
+  for (let i = 0; i < 3; i += 1) {
+    const c = creerCarte(salle.partie, 'maki', false, 0);
+    c.colonne = 'assemblage';
+    c.etat = 'attente';
+  }
+  tick(salle, CONFIG.commis.delaiReaffectation + 1000);
+  assert.equal(commis.poste, 'assemblage'); // il est allé aider le goulot
+});
+
+test('les commis ne maintiennent pas une salle en vie (TTL)', () => {
+  const { salle, joueur } = creerSalle('Solo', '🍣');
+  ajouterCommis(salle);
+  joueur.connecte = false; // l'humain part, le commis reste
+  salle.derniereActivite = 0;
+  nettoyerSalles(CONFIG.salle.ttlSalleVide + 1);
+  assert.equal(salles.has(salle.code), false);
 });
 
 // ---------------------------------------------------------------------------

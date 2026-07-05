@@ -53,6 +53,7 @@ export const sons = {
   bloque()    { jouer([[330, 0.08]], 'square', 0.03); },                       // action refusée
   aide()      { jouer([[880, 0.12], [880, 0.12, 0.2], [880, 0.12, 0.4]]); },   // cloche d'appel à l'aide
   tick()      { jouer([[1320, 0.05]], 'sine', 0.045); },                       // tic des 5 dernières secondes
+  evenement() { jouer([[440, 0.14], [554, 0.14, 0.12], [440, 0.2, 0.24]], 'triangle', 0.07); }, // annonce kabuki
   gong()      { jouer([[196, 0.7], [98, 0.9, 0.02]], 'triangle', 0.08); },     // gong d'ouverture de manche
   finManche() { jouer([[784, 0.2], [659, 0.2, 0.18], [523, 0.35, 0.36]]); },   // gong de fin
 };

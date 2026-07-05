@@ -72,6 +72,8 @@ export const EVT = {
   FACIL_PROLONGER:   'c2s:facil:prolongerManche',
   FACIL_VIDER:       'c2s:facil:viderCommandes',
   FACIL_TRANSFERT:   'c2s:facil:transfererRole',
+  FACIL_COMMIS:      'c2s:facil:gererCommis',
+  FACIL_EVENEMENT:   'c2s:facil:declencherEvenement',
   FACIL_WIP:         'c2s:facil:reglerWip',
   FACIL_DEBIT:       'c2s:facil:reglerDebit',
   FACIL_EXPEDITE:    'c2s:facil:injecterExpedite',

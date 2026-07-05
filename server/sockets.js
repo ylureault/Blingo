@@ -97,12 +97,19 @@ export function attacherSockets(io) {
       if (poste !== null && !POSTES.includes(poste)) {
         return repondre?.({ ok: false, erreur: 'Poste inconnu.' });
       }
-      // Changer de poste libère les cartes en cours : on ne déserte pas
-      // son plan de travail avec les sushis sous le bras.
-      if (joueur.poste !== poste) flow.libererCartesDuJoueur(salle.partie, joueur);
+      if (joueur.poste !== poste) {
+        // Changer de poste libère les cartes en cours : on ne déserte pas
+        // son plan de travail avec les sushis sous le bras.
+        flow.libererCartesDuJoueur(salle.partie, joueur);
+        // Et on ne se téléporte pas : traverser la cuisine prend du temps
+        // (uniquement pendant une manche — au lobby, on s'installe librement)
+        if (salle.partie.statut === STATUTS.MANCHE && joueur.poste !== null && poste !== null) {
+          joueur.enDeplacementJusqua = Date.now() + CONFIG.roles.dureeDeplacement;
+        }
+      }
       joueur.poste = poste;
       salle.derniereActivite = Date.now();
-      repondre?.({ ok: true });
+      repondre?.({ ok: true, arriveeA: joueur.enDeplacementJusqua || 0 });
       diffuser(io, salle);
     });
 
@@ -191,6 +198,24 @@ export function attacherSockets(io) {
     socket.on(EVT.FACIL_VIDER, (_donnees, repondre) => {
       if (!estFacilitateur(repondre)) return;
       repondre?.(game.viderCommandes(salle));
+      diffuser(io, salle);
+    });
+
+    // Événement de cuisine à la demande (le 🎲 du facilitateur)
+    socket.on(EVT.FACIL_EVENEMENT, (_donnees, repondre) => {
+      if (!estFacilitateur(repondre)) return;
+      const evenement = game.declencherEvenement(salle, Date.now());
+      if (!evenement) return repondre?.({ ok: false, erreur: 'Aucune manche en cours.' });
+      io.to(salle.code).emit(EVT.EVENEMENT, { type: 'evenementCuisine', evenement });
+      repondre?.({ ok: true });
+      diffuser(io, salle);
+    });
+
+    // Commis virtuels 🤖 : le renfort du mode solo
+    socket.on(EVT.FACIL_COMMIS, ({ action } = {}, repondre) => {
+      if (!estFacilitateur(repondre)) return;
+      const reponse = action === 'retirer' ? game.retirerCommis(salle) : game.ajouterCommis(salle);
+      repondre?.(reponse);
       diffuser(io, salle);
     });
 
