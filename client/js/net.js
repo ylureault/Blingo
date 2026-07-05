@@ -29,7 +29,11 @@ class Reseau {
   connecter() {
     if (this.socket) return;
     // eslint-disable-next-line no-undef — io est fourni par /socket.io/socket.io.js
-    this.socket = io({ transports: ['websocket', 'polling'] });
+    // IMPORTANT : on garde le transport par défaut (polling d'abord, puis
+    // montée en WebSocket automatique). Forcer le WebSocket en premier rend
+    // le jeu totalement muet derrière un reverse proxy qui ne transmet pas
+    // l'upgrade — alors que le polling passe partout.
+    this.socket = io();
 
     this.socket.on(EVT.ETAT, (etat) => {
       this.etat = etat;
@@ -48,6 +52,8 @@ class Reseau {
     // Signal de connexion pour le bandeau et la pastille d'état
     this.socket.on('connect', () => { for (const cb of this.abonnesConnexion) cb(true); });
     this.socket.on('disconnect', () => { for (const cb of this.abonnesConnexion) cb(false); });
+    // Échec de la PREMIÈRE connexion (proxy, réseau…) : on le montre aussi
+    this.socket.on('connect_error', () => { for (const cb of this.abonnesConnexion) cb(false); });
   }
 
   onEtat(cb) { this.abonnesEtat.push(cb); }

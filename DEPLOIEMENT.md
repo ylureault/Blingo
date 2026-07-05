@@ -161,9 +161,27 @@ perdues au redémarrage.
 
 ## Dépannage express
 
+**Tester l'upgrade WebSocket depuis n'importe quelle machine** (le test qui
+diagnostique 90 % des pannes) :
+
+```bash
+curl -sv --http1.1 \
+  -H "Connection: Upgrade" -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGVzdHRlc3R0ZXN0dGU=" \
+  "https://kanban.insuffle-academie.com/socket.io/?EIO=4&transport=websocket" 2>&1 | grep "HTTP"
+# ✅ attendu :  HTTP/1.1 101 Switching Protocols
+# ❌ HTTP 400 : nginx ne transmet pas l'upgrade → il manque les deux lignes
+#    proxy_set_header Upgrade/Connection dans le bloc location (étape 6)
+```
+
+Depuis la correction du client (transport par défaut), le jeu **fonctionne
+quand même** sans WebSocket, en mode polling — mais le WebSocket reste
+préférable (latence plus basse, moins de requêtes).
+
 | Symptôme | Cause probable | Remède |
 |---|---|---|
-| Le jeu s'affiche mais rien ne bouge en temps réel | L'upgrade WebSocket ne passe pas | Vérifiez les 2 lignes `Upgrade`/`Connection` dans nginx, puis `sudo nginx -t && sudo systemctl reload nginx` |
+| Boutons muets, salle impossible à créer | Ancien client qui exigeait le WebSocket + upgrade bloqué | Mettez à jour (`git pull && pm2 reload sushi-kanban`), puis corrigez nginx (test ci-dessus) |
+| Le jeu marche mais latence visible (~300 ms) | Upgrade WebSocket refusé, le jeu tourne en polling | Ajoutez les 2 lignes `Upgrade`/`Connection` dans nginx, puis `sudo nginx -t && sudo systemctl reload nginx` |
 | `EADDRINUSE` au démarrage | Le port 3000 est déjà pris | `pm2 status` (double lancement ?) ou changez `PORT` |
 | Les joueurs sont déconnectés toutes les minutes | `proxy_read_timeout` trop court | Remettez `proxy_read_timeout 3600s;` |
 | Deux salles avec le même code introuvables | PM2 en mode cluster | `pm2 delete sushi-kanban` puis relancez SANS `-i` |
